@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crisanta · POS</title>
+<link rel="icon" href="https://duretoncito.github.io/Crisanta-licores-y-vapers/imgfavicon.png.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --o:#14110f; --bo:#3b3129; --d:#c9973f; --f:#f7f4ef; --t:#1c1714; --m:#7c6f64; --b:#ebe5dc; --r:#dc2626; --g:#15803d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, sans-serif; background: var(--f); color: var(--t); font-size: 14px; }
+  button, input, select { font: inherit; color: var(--t); }
+  button { cursor: pointer; background: #fff; border: 1px solid #d6cdc2; border-radius: 10px; padding: 8px 12px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  input, select { background: #fff; border: 1px solid #d6cdc2; border-radius: 10px; padding: 0 10px; height: 38px; outline: none; }
+  input:focus, select:focus { border-color: var(--d); }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--d); }
+  h3 { margin: 0 0 8px; font-size: 16px; }
+  .hd { background: var(--o); position: sticky; top: 0; z-index: 5; }
+  .bar { max-width: 1100px; margin: auto; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: var(--d); }
+  .brand { flex: 1; } .brand small { display: block; font-size: 10px; letter-spacing: .15em; color: #b59a74; }
+  .brand b { color: #fff; font-size: 17px; }
+  .salir { background: none; border-color: var(--bo); color: #d6cbbf; }
+  .tabs { max-width: 1100px; margin: auto; padding: 0 16px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { background: none; border-color: var(--bo); color: #d6cbbf; border-radius: 999px; padding: 7px 16px; }
+  .tab.on { background: var(--d); border-color: var(--d); color: var(--o); font-weight: 600; }
+  main { max-width: 1100px; margin: auto; padding: 16px; }
+  .caja { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(300px,1fr); gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .caja { grid-template-columns: 1fr; } }
+  .box { background: #fff; border: 1px solid var(--b); border-radius: 16px; padding: 14px 16px; }
+  .cats { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .cat { border-radius: 999px; padding: 6px 13px; font-size: 13px; }
+  .cat.on { background: var(--o); color: #fff; border-color: var(--o); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .pc { text-align: left; border-color: var(--b); border-radius: 14px; padding: 10px 12px; }
+  .pc:hover { border-color: var(--d); }
+  .pc b { display: block; font-size: 13px; line-height: 1.3; }
+  .pc small { color: var(--m); font-size: 12px; }
+  .pc .fila { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; }
+  .ln { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f0ebe3; }
+  .mu { color: var(--m); }
+  .lb { display: block; font-size: 12px; color: var(--m); margin-bottom: 4px; }
+  .ck { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .pri { background: var(--o); color: #fff; border-color: var(--o); font-weight: 600; width: 100%; padding: 12px; }
+  .verde { background: var(--g); border-color: var(--g); }
+  .msg { font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+  .kps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  .kp { background: #fff; border: 1px solid var(--b); border-radius: 14px; padding: 12px 14px; }
+  .kp b { display: block; font-size: 20px; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--m); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--b); white-space: nowrap; }
+  td { padding: 8px 6px; border-bottom: 1px solid #f0ebe3; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #fde8e8; color: #991b1b; white-space: nowrap; }
+  .br { display: flex; justify-content: space-between; padding: 4px 0; }
+  .coms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
+  .oculto { display: none !important; }
+  .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
+  .login input { width: 100%; margin-bottom: 10px; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<!-- Pantalla de inicio de sesión -->
+<section id="vLogin" class="login oculto">
+  <div class="box">
+    <img class="logo" src="https://duretoncito.github.io/Crisanta-licores-y-vapers/imgfavicon.png.png" alt="Crisanta" style="width:64px;height:64px;border-radius:16px;margin-bottom:8px">
+    <h2 style="margin:0 0 4px">Crisanta POS</h2>
+    <p class="mu" style="margin:0 0 16px">Ingresa con tu cuenta</p>
+    <form id="fLogin">
+      <input id="email" type="email" placeholder="Correo" required autocomplete="username">
+      <input id="pass" type="password" placeholder="Contraseña" required autocomplete="current-password">
+      <button class="pri">Entrar</button>
+      <p class="msg" id="mLogin"></p>
+    </form>
+  </div>
+</section>
+
+<!-- Sistema -->
+<div id="vApp" class="oculto">
+  <header class="hd">
+    <div class="bar">
+      <img class="logo" src="https://duretoncito.github.io/Crisanta-licores-y-vapers/imgfavicon.png.png" alt="">
+      <div class="brand"><small>SISTEMA POS</small><b>Crisanta</b></div>
+      <button class="salir" id="salir">Salir</button>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-t="caja">Caja</button>
+      <button class="tab" data-t="inv">Inventario</button>
+      <button class="tab" data-t="ven">Ventas</button>
+      <button class="tab" data-t="com">Comisiones</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- CAJA -->
+    <section id="s-caja" class="caja">
+      <div>
+        <input id="q" placeholder="Buscar producto" style="width:100%">
+        <div class="cats" id="cats"></div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <div class="box">
+        <h3>Venta actual</h3>
+        <div id="cart"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+          <label><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
+          <label><span class="lb">Pago</span>
+            <select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option><option>Transferencia</option></select>
+          </label>
+        </div>
+        <label class="ck"><input type="checkbox" id="dom"> Domicilio</label>
+        <label class="ck" id="pdl" style="margin:8px 0 12px 25px;font-size:13px"><input type="checkbox" id="pd"> Pagamos el domi ($5.000)</label>
+        <div class="br" style="font-size:20px;font-weight:700;border-top:1px solid var(--b);padding-top:10px"><span>Total a cobrar</span><span id="tot">$0</span></div>
+        <div class="br mu" style="font-size:13px"><span>Comisión vendedor</span><span id="vc">$0</span></div>
+        <div class="br mu" style="font-size:13px" id="gd"></div>
+        <button class="pri" id="cobrar" style="margin-top:10px">Cobrar</button>
+        <p class="msg" id="msg"></p>
+      </div>
+    </section>
+
+    <!-- INVENTARIO -->
+    <section id="s-inv" class="oculto">
+      <div class="box" style="margin-bottom:14px">
+        <h3>Entrada de mercancía</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label style="flex:2;min-width:200px"><span class="lb">Producto</span><select id="eP" style="width:100%"></select></label>
+          <label><span class="lb">Cantidad</span><input id="eQ" type="number" min="1" step="1" style="width:90px"></label>
+          <label><span class="lb">Costo por unidad</span><input id="eK" type="number" min="0" step="100" style="width:120px"></label>
+          <label><span class="lb">Lote (opcional)</span><input id="eL" style="width:110px"></label>
+          <label><span class="lb">Vence (opcional)</span><input id="eV" type="date"></label>
+          <button id="eB" class="pri" style="width:auto;height:38px;padding:0 18px">Registrar</button>
+        </div>
+        <p class="msg" id="eM"></p>
+      </div>
+      <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <h3 style="margin:0">Stock actual</h3><select id="iC"></select>
+        </div>
+        <div class="scroll"><table>
+          <thead><tr><th>Producto</th><th>Costo prom.</th><th>Precio</th><th>Comisión</th><th>Stock</th></tr></thead>
+          <tbody id="iT"></tbody>
+        </table></div>
+        <p class="mu" id="iV" style="font-size:13px;margin:10px 0 0"></p>
+      </div>
+    </section>
+
+    <!-- VENTAS -->
+    <section id="s-ven" class="oculto">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+        <label><span class="lb">Periodo</span>
+          <select id="per">
+            <option value="all">Todo</option><option value="m">Este mes</option><option value="pm">Mes pasado</option>
+            <option value="7">Últimos 7 días</option><option value="r">Rango de fechas</option>
+          </select>
+        </label>
+        <span id="rg" class="oculto" style="display:flex;gap:8px">
+          <label><span class="lb">Desde</span><input type="date" id="d1"></label>
+          <label><span class="lb">Hasta</span><input type="date" id="d2"></label>
+        </span>
+      </div>
+      <div class="kps">
+        <div class="kp"><span class="mu">Ventas</span><b id="k1">0</b></div>
+        <div class="kp"><span class="mu">Total vendido</span><b id="k2">$0</b></div>
+        <div class="kp"><span class="mu">Ganancia</span><b id="k3" style="color:var(--g)">$0</b></div>
+      </div>
+      <div class="box" id="bd" style="margin-bottom:12px"></div>
+      <div class="box"><div id="vL"></div><button id="mas" class="oculto" style="width:100%;margin-top:10px">Ver más ventas</button></div>
+    </section>
+
+    <!-- COMISIONES -->
+    <section id="s-com" class="oculto">
+      <div class="coms" id="cL"></div>
+      <div class="box" id="hL"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // ✏️ Pon aquí los datos de tu proyecto (Supabase → Project Settings → API)
+ const SUPABASE_URL = "https://tugwensfpuagsggersvw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
+
+  // ✏️ Ajustes
+  const DOMI = 5000;          // lo que se le paga al repartidor
+  const LIM_DOMI = 70000;     // desde este valor la tienda paga el domi
+  const ORDEN = ["Vapers", "Destilados", "Baterías", "Gomitas", "Licores", "Cervezas"];
+  const PROMO = "Promociones";
+
+  // ---------- De aquí para abajo no necesitas tocar nada ----------
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = id => document.getElementById(id);
+  const f = n => "$" + Math.round(Number(n) || 0).toLocaleString("es-CO");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const sum = (a, k) => a.reduce((s, x) => s + Number(x[k] || 0), 0);
+  const limpiar = m => /fetch|network/i.test(m) ? "No hay conexión a internet. Intenta de nuevo." : m;
+  function say(id, t, ok) { const e = $(id); e.textContent = t; e.style.color = ok ? "var(--g)" : "var(--r)"; }
+  function fd(t) {
+    const d = new Date(t), hoy = new Date();
+    const h = d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+    if (d.toDateString() === hoy.toDateString()) return "Hoy " + h;
+    return d.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: d.getFullYear() !== hoy.getFullYear() ? "numeric" : undefined }) + " · " + h;
+  }
+
+  let PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [];
+  let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false;
+
+  // ----- Sesión -----
+  db.auth.onAuthStateChange((_e, s) => setTimeout(() => pantalla(!!s), 0));
+  function pantalla(ok) {
+    $("vLogin").classList.toggle("oculto", ok);
+    $("vApp").classList.toggle("oculto", !ok);
+    if (ok && !cargado) { cargado = true; cargarTodo(); }
+    if (!ok) { cargado = false; C = {}; }
+  }
+  $("fLogin").onsubmit = async e => {
+    e.preventDefault();
+    say("mLogin", "Entrando…", true);
+    const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pass").value });
+    if (error) say("mLogin", limpiar(error.message).includes("conexión") ? limpiar(error.message) : "Correo o contraseña incorrectos.");
+    else $("mLogin").textContent = "";
+  };
+  $("salir").onclick = () => db.auth.signOut();
+
+  // ----- Pestañas -----
+  document.querySelectorAll(".tab").forEach(b => b.onclick = async () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
+    ["caja", "inv", "ven", "com"].forEach(s => $("s-" + s).classList.toggle("oculto", s !== b.dataset.t));
+    const t = b.dataset.t;
+    if (t === "caja" || t === "inv") { await cargarCatalogo(); pintarCaja(); pintarInv(); }
+    if (t === "ven") cargarVentas();
+    if (t === "com") cargarComisiones();
+  });
+
+  // ----- Carga de datos -----
+  async function cargarTodo() {
+    await Promise.all([cargarCatalogo(), cargarVendedores()]);
+    pintarCaja(); pintarInv(); cargarVentas(); cargarComisiones();
+  }
+  const rank = c => { const i = ORDEN.indexOf(c); return i < 0 ? 99 : i; };
+  async function cargarCatalogo() {
+    const [p, c] = await Promise.all([
+      db.from("productos").select("*").eq("activo", true),
+      db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
+    ]);
+    if (p.error || c.error) { alert("Error cargando productos: " + limpiar((p.error || c.error).message)); return; }
+    PRODS = p.data.sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
+    COMBOS = c.data;
+  }
+  async function cargarVendedores() {
+    const { data, error } = await db.from("vendedores").select("*").eq("activo", true).order("nombre");
+    if (error) { alert(limpiar(error.message)); return; }
+    VENDS = data;
+    $("vend").innerHTML = '<option value="">Elegir</option>' + VENDS.map(v => `<option value="${v.id}">${esc(v.nombre)}</option>`).join("");
+  }
+
+  // ----- Caja -----
+  const prod = id => PRODS.find(p => p.id === id);
+  const combo = id => COMBOS.find(c => c.id === id);
+  const comboStock = c => c.combo_items.length ? Math.min(...c.combo_items.map(i => Math.floor((prod(i.producto_id)?.stock || 0) / i.cantidad))) : 0;
+  function info(k) {
+    const [t, id] = k.split("-");
+    const x = t === "p" ? prod(+id) : combo(+id);
+    return { n: x.nombre, p: Number(x.precio), c: Number(x.comision) };
+  }
+  function need() {
+    const N = {};
+    for (const [k, q] of Object.entries(C)) {
+      const [t, id] = k.split("-");
+      if (t === "p") N[id] = (N[id] || 0) + q;
+      else combo(+id).combo_items.forEach(i => N[i.producto_id] = (N[i.producto_id] || 0) + i.cantidad * q);
+    }
+    return N;
+  }
+  const alcanza = () => Object.entries(need()).every(([id, q]) => (prod(+id)?.stock || 0) >= q);
+  const subtotal = () => Object.keys(C).reduce((a, k) => a + info(k).p * C[k], 0);
+
+  function tarjeta(k, n, sub, precio, stock, min) {
+    return `<button class="pc" data-k="${k}" ${stock <= 0 ? 'style="opacity:.5"' : ""}>
+      <b>${esc(n)}</b><small>${esc(sub)}</small>
+      <div class="fila"><strong>${f(precio)}</strong>
+      <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${stock <= 0 ? "Agotado" : stock + " und"}</span></div></button>`;
+  }
+  function pintarCaja() {
+    const cs = ["Todos", ...new Set(PRODS.map(p => p.categoria)), ...(COMBOS.length ? [PROMO] : [])];
+    $("cats").innerHTML = cs.map(c => `<button class="cat${c === cat ? " on" : ""}" data-c="${esc(c)}">${c === PROMO ? "🔥 " : ""}${esc(c)}</button>`).join("");
+    const q = norm($("q").value.trim());
+    let h = "";
+    if (cat === PROMO || (q && cat === "Todos"))
+      h += COMBOS.filter(c => !q || norm(c.nombre).includes(q)).map(c => tarjeta("c-" + c.id, c.nombre, "Combo", c.precio, comboStock(c), 0)).join("");
+    if (cat !== PROMO)
+      h += PRODS.filter(p => (cat === "Todos" || p.categoria === cat) && (!q || norm(p.nombre).includes(q)))
+                .map(p => tarjeta("p-" + p.id, p.nombre, p.categoria, p.precio, p.stock, p.stock_minimo)).join("");
+    $("grid").innerHTML = h || '<p class="mu">No hay productos con esa búsqueda.</p>';
+    pintarCarrito();
+  }
+  function pintarCarrito() {
+    const ks = Object.keys(C);
+    $("cart").innerHTML = ks.length ? ks.map(k => {
+      const x = info(k);
+      return `<div class="ln"><span>${C[k]} × ${esc(x.n)}</span>
+        <span style="display:flex;gap:8px;align-items:center;white-space:nowrap">${f(x.p * C[k])}
+        <button data-r="${k}" style="padding:2px 10px" aria-label="Quitar uno">−</button></span></div>`;
+    }).join("") : '<p class="mu">Toca un producto para agregarlo.</p>';
+    const s = subtotal(), d = $("dom").checked;
+    if (!d) { $("pd").checked = false; manual = false; }
+    else if (!manual) $("pd").checked = s >= LIM_DOMI;
+    $("pdl").style.opacity = d ? 1 : .45;
+    $("tot").textContent = f(s);
+    $("vc").textContent = f(ks.reduce((a, k) => a + info(k).c * C[k], 0));
+    $("gd").innerHTML = d && $("pd").checked ? `<span>Gasto de la tienda (domi)</span><span>${f(DOMI)}</span>` : "";
+  }
+  $("grid").onclick = e => {
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    const k = b.dataset.k;
+    C[k] = (C[k] || 0) + 1;
+    if (!alcanza()) { if (--C[k] <= 0) delete C[k]; return say("msg", "No hay stock suficiente de ese producto."); }
+    $("msg").textContent = "";
+    pintarCarrito();
+  };
+  $("cats").onclick = e => { const b = e.target.closest("[data-c]"); if (b) { cat = b.dataset.c; pintarCaja(); } };
+  $("q").oninput = pintarCaja;
+  $("cart").onclick = e => { const b = e.target.closest("[data-r]"); if (!b) return; const k = b.dataset.r; if (--C[k] <= 0) delete C[k]; pintarCarrito(); };
+  $("dom").onchange = pintarCarrito;
+  $("pd").onchange = () => { if (!$("dom").checked) { $("pd").checked = false; return; } manual = true; pintarCarrito(); };
+  $("vend").onchange = () => $("msg").textContent = "";
+  $("cobrar").onclick = async () => {
+    const ks = Object.keys(C);
+    if (!ks.length) return say("msg", "Agrega al menos un producto.");
+    if (!$("vend").value) return say("msg", "Elige el vendedor.");
+    const items = ks.map(k => { const [t, id] = k.split("-"); return { tipo: t === "c" ? "combo" : "producto", id: +id, cantidad: C[k] }; });
+    const total = subtotal();
+    $("cobrar").disabled = true; say("msg", "Guardando…", true);
+    const { error } = await db.rpc("registrar_venta", {
+      p_vendedor: +$("vend").value, p_metodo: $("pago").value,
+      p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked, p_items: items
+    });
+    $("cobrar").disabled = false;
+    if (error) return say("msg", limpiar(error.message));
+    C = {}; $("dom").checked = false; manual = false;
+    await cargarCatalogo(); pintarCaja(); pintarInv();
+    say("msg", "Venta registrada por " + f(total) + ".", true);
+  };
+
+  // ----- Inventario -----
+  function ponerCosto() { const p = prod(+$("eP").value); $("eK").value = p && Number(p.costo) > 0 ? Math.round(p.costo) : ""; }
+  function pintarInv() {
+    const sel = $("eP").value;
+    $("eP").innerHTML = PRODS.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
+    if (sel) $("eP").value = sel;
+    if (!$("eK").value) ponerCosto();
+    const ic = $("iC").value || "Todas", cs = ["Todas", ...new Set(PRODS.map(p => p.categoria))];
+    $("iC").innerHTML = cs.map(c => `<option>${esc(c)}</option>`).join("");
+    $("iC").value = cs.includes(ic) ? ic : "Todas";
+    const L = PRODS.filter(p => $("iC").value === "Todas" || p.categoria === $("iC").value);
+    $("iT").innerHTML = L.map(p => `<tr><td>${esc(p.nombre)}</td><td>${f(p.costo)}</td><td>${f(p.precio)}</td><td>${f(p.comision)}</td>
+      <td>${p.stock <= 0 ? '<span class="pill">Agotado</span>' : p.stock + (p.stock <= p.stock_minimo ? ' <span class="pill">pedir</span>' : "")}</td></tr>`).join("");
+    $("iV").textContent = "Valor del inventario a costo: " + f(L.reduce((a, p) => a + Number(p.costo) * p.stock, 0));
+  }
+  $("eP").onchange = () => { ponerCosto(); $("eM").textContent = ""; };
+  $("iC").onchange = pintarInv;
+  $("eB").onclick = async () => {
+    const id = +$("eP").value, q = parseInt($("eQ").value, 10), k = Number($("eK").value);
+    if (!q || q < 1) return say("eM", "Escribe una cantidad mayor que cero.");
+    if ($("eK").value === "" || k < 0) return say("eM", "Escribe el costo por unidad.");
+    const antes = Number(prod(id).costo);
+    $("eB").disabled = true;
+    const { error } = await db.rpc("registrar_entrada", {
+      p_producto: id, p_cantidad: q, p_costo: k,
+      p_lote: $("eL").value.trim() || null, p_vencimiento: $("eV").value || null
+    });
+    $("eB").disabled = false;
+    if (error) return say("eM", limpiar(error.message));
+    await cargarCatalogo();
+    const n = prod(id);
+    say("eM", `Entraron ${q} und de ${n.nombre}. Stock: ${n.stock}. Costo promedio: ${f(antes)} → ${f(n.costo)}`, true);
+    $("eQ").value = ""; $("eL").value = ""; $("eV").value = "";
+    pintarInv(); pintarCaja();
+  };
+
+  // ----- Ventas -----
+  function rango() {
+    const v = $("per").value, n = new Date();
+    let a = null, b = null;
+    if (v === "m") a = new Date(n.getFullYear(), n.getMonth(), 1);
+    else if (v === "pm") { a = new Date(n.getFullYear(), n.getMonth() - 1, 1); b = new Date(new Date(n.getFullYear(), n.getMonth(), 1) - 1); }
+    else if (v === "7") a = new Date(Date.now() - 7 * 864e5);
+    else if (v === "r") {
+      if ($("d1").value) a = new Date($("d1").value + "T00:00:00");
+      if ($("d2").value) b = new Date($("d2").value + "T23:59:59");
+    }
+    return [a && a.toISOString(), b && b.toISOString()];
+  }
+  async function cargarVentas() {
+    const [a, b] = rango();
+    $("vL").innerHTML = '<p class="mu">Cargando…</p>';
+    let todas = [], desde = 0;
+    while (true) {
+      let q = db.from("ventas")
+        .select("id, creado_en, metodo_pago, domicilio, domi_tienda, total, costo_total, comision_total, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
+        .order("creado_en", { ascending: false }).range(desde, desde + 999);
+      if (a) q = q.gte("creado_en", a);
+      if (b) q = q.lte("creado_en", b);
+      const { data, error } = await q;
+      if (error) { $("vL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
+      todas = todas.concat(data);
+      if (data.length < 1000) break;
+      desde += 1000;
+    }
+    VENTAS = todas; lim = 20; pintarVentas();
+  }
+  function pintarVentas() {
+    const H = VENTAS, V = sum(H, "total"), K = sum(H, "costo_total"), CO = sum(H, "comision_total"), D = sum(H, "domi_tienda"), G = V - K - CO - D;
+    $("k1").textContent = H.length; $("k2").textContent = f(V); $("k3").textContent = f(G);
+    $("bd").innerHTML = `<h3>De dónde sale la ganancia</h3>
+      <div class="br"><span>Total vendido</span><span>${f(V)}</span></div>
+      <div class="br mu"><span>− Costo de la mercancía</span><span>${f(K)}</span></div>
+      <div class="br mu"><span>− Comisiones</span><span>${f(CO)}</span></div>
+      <div class="br mu"><span>− Domis pagados por la tienda</span><span>${f(D)}</span></div>
+      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px;color:var(--g)"><span>Ganancia</span><span>${f(G)}</span></div>`;
+    $("vL").innerHTML = `<h3>Historial de ventas <span class="mu" style="font-weight:400">(${H.length})</span></h3>` +
+      (H.length ? H.slice(0, lim).map(s => `<div class="ln" style="align-items:flex-start"><div>
+        <div>${s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ")}</div>
+        <div class="mu" style="font-size:12px">${fd(s.creado_en)} · ${esc(s.vendedores?.nombre || "")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}</div>
+        </div><strong style="white-space:nowrap">${f(s.total)}</strong></div>`).join("") : '<p class="mu">No hay ventas en este periodo.</p>');
+    $("mas").classList.toggle("oculto", H.length <= lim);
+  }
+  $("per").onchange = () => { $("rg").classList.toggle("oculto", $("per").value !== "r"); cargarVentas(); };
+  $("d1").onchange = cargarVentas;
+  $("d2").onchange = cargarVentas;
+  $("mas").onclick = () => { lim += 20; pintarVentas(); };
+
+  // ----- Comisiones -----
+  async function cargarComisiones() {
+    const [p, h] = await Promise.all([
+      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)").is("pago_comision_id", null),
+      db.from("pagos_comision").select("id, monto, num_ventas, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
+    ]);
+    if (p.error || h.error) { $("cL").innerHTML = `<p style="color:var(--r)">${esc(limpiar((p.error || h.error).message))}</p>`; return; }
+    PEND = p.data; PAGOS = h.data; pintarComisiones();
+  }
+  function pintarComisiones() {
+    $("cL").innerHTML = VENDS.map(v => {
+      const ps = PEND.filter(s => s.vendedor_id === v.id), m = sum(ps, "comision_total");
+      const u = ps.reduce((a, s) => a + s.venta_items.reduce((b, i) => b + i.cantidad, 0), 0);
+      const ult = PAGOS.find(x => x.vendedor_id === v.id);
+      return `<div class="box">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><div class="av">${esc((v.nombre[0] || "?").toUpperCase())}</div>
+        <div><b>${esc(v.nombre)}</b><div class="mu" style="font-size:12px">Último pago: ${ult ? fd(ult.creado_en) : "ninguno"}</div></div></div>
+        <div class="ln"><span class="mu">Ventas pendientes</span><span>${ps.length}</span></div>
+        <div class="ln"><span class="mu">Unidades</span><span>${u}</span></div>
+        <div class="br" style="font-size:18px;font-weight:700;padding:10px 0"><span>Por pagar</span><span>${f(m)}</span></div>
+        ${m <= 0 ? '<p class="mu" style="margin:0">Está al día.</p>'
+          : conf[v.id] ? `<button class="pri verde" data-pay="${v.id}">Confirmar pago de ${f(m)}</button><button data-cancel="${v.id}" style="width:100%;margin-top:6px">Cancelar</button>`
+          : `<button class="pri" data-ask="${v.id}">Pagar comisión</button>`}
+      </div>`;
+    }).join("");
+    $("hL").innerHTML = "<h3>Historial de pagos</h3>" + (PAGOS.length ? PAGOS.map(x => `<div class="ln"><div>
+      <div>${esc(x.vendedores?.nombre || "")}</div><div class="mu" style="font-size:12px">${fd(x.creado_en)} · ${x.num_ventas} ventas</div>
+      </div><strong>${f(x.monto)}</strong></div>`).join("") : '<p class="mu">Todavía no hay pagos registrados.</p>');
+  }
+  $("cL").onclick = async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.ask) { conf[b.dataset.ask] = true; pintarComisiones(); }
+    else if (b.dataset.cancel) { conf[b.dataset.cancel] = false; pintarComisiones(); }
+    else if (b.dataset.pay) {
+      b.disabled = true;
+      const id = +b.dataset.pay;
+      const { error } = await db.rpc("pagar_comision", { p_vendedor: id });
+      conf[id] = false;
+      if (error) alert(limpiar(error.message));
+      await cargarComisiones();
+    }
+  };
+</script>
+</body>
+</html>
