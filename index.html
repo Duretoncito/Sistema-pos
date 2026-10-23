@@ -23,13 +23,14 @@
   .logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: var(--d); }
   .brand { flex: 1; } .brand small { display: block; font-size: 10px; letter-spacing: .15em; color: #b59a74; }
   .brand b { color: #fff; font-size: 17px; }
+  .quien { color: #b59a74; font-size: 12px; }
   .salir { background: none; border-color: var(--bo); color: #d6cbbf; }
   .tabs { max-width: 1100px; margin: auto; padding: 0 16px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
   .tab { background: none; border-color: var(--bo); color: #d6cbbf; border-radius: 999px; padding: 7px 16px; }
   .tab.on { background: var(--d); border-color: var(--d); color: var(--o); font-weight: 600; }
   main { max-width: 1100px; margin: auto; padding: 16px; }
   .caja { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(300px,1fr); gap: 16px; align-items: start; }
-  @media (max-width: 760px) { .caja { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .caja, .dos { grid-template-columns: 1fr !important; } }
   .box { background: #fff; border: 1px solid var(--b); border-radius: 16px; padding: 14px 16px; }
   .cats { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
   .cat { border-radius: 999px; padding: 6px 13px; font-size: 13px; }
@@ -54,9 +55,11 @@
   th { text-align: left; color: var(--m); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--b); white-space: nowrap; }
   td { padding: 8px 6px; border-bottom: 1px solid #f0ebe3; }
   .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #fde8e8; color: #991b1b; white-space: nowrap; }
+  .pill.ok { background: #e7f6ee; color: #15803d; }
   .br { display: flex; justify-content: space-between; padding: 4px 0; }
   .coms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 12px; }
   .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
+  .x { padding: 2px 9px; color: #9c9087; }
   .oculto { display: none !important; }
   .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
   .login input { width: 100%; margin-bottom: 10px; }
@@ -65,7 +68,7 @@
 </head>
 <body>
 
-<!-- Pantalla de inicio de sesión -->
+<!-- Inicio de sesión -->
 <section id="vLogin" class="login oculto">
   <div class="box">
     <img class="logo" src="https://duretoncito.github.io/Crisanta-licores-y-vapers/imgfavicon.png.png" alt="Crisanta" style="width:64px;height:64px;border-radius:16px;margin-bottom:8px">
@@ -86,19 +89,20 @@
     <div class="bar">
       <img class="logo" src="https://duretoncito.github.io/Crisanta-licores-y-vapers/imgfavicon.png.png" alt="">
       <div class="brand"><small>SISTEMA POS</small><b>Crisanta</b></div>
+      <span class="quien" id="quien"></span>
       <button class="salir" id="salir">Salir</button>
     </div>
-    <nav class="tabs">
-      <button class="tab on" data-t="caja">Caja</button>
-      <button class="tab" data-t="inv">Inventario</button>
-      <button class="tab" data-t="ven">Ventas</button>
-      <button class="tab" data-t="com">Comisiones</button>
-    </nav>
+    <nav class="tabs" id="tabs"></nav>
   </header>
 
   <main>
+    <div id="sinRol" class="box oculto" style="max-width:420px;margin:40px auto;text-align:center">
+      <h3>Tu usuario no tiene permisos</h3>
+      <p class="mu" style="margin:0">Pídele a uno de los dueños que te asigne un rol en el sistema.</p>
+    </div>
+
     <!-- CAJA -->
-    <section id="s-caja" class="caja">
+    <section id="s-caja" class="caja oculto">
       <div>
         <input id="q" placeholder="Buscar producto" style="width:100%">
         <div class="cats" id="cats"></div>
@@ -109,9 +113,7 @@
         <div id="cart"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
           <label><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
-          <label><span class="lb">Pago</span>
-            <select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option><option>Transferencia</option></select>
-          </label>
+          <label><span class="lb">Pago</span><select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option></select></label>
         </div>
         <label class="ck"><input type="checkbox" id="dom"> Domicilio</label>
         <label class="ck" id="pdl" style="margin:8px 0 12px 25px;font-size:13px"><input type="checkbox" id="pd"> Pagamos el domi ($5.000)</label>
@@ -130,11 +132,12 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
           <label style="flex:2;min-width:200px"><span class="lb">Producto</span><select id="eP" style="width:100%"></select></label>
           <label><span class="lb">Cantidad</span><input id="eQ" type="number" min="1" step="1" style="width:90px"></label>
-          <label><span class="lb">Costo por unidad</span><input id="eK" type="number" min="0" step="100" style="width:120px"></label>
+          <label id="eKl"><span class="lb">Costo por unidad</span><input id="eK" type="number" min="0" step="100" style="width:120px"></label>
           <label><span class="lb">Lote (opcional)</span><input id="eL" style="width:110px"></label>
           <label><span class="lb">Vence (opcional)</span><input id="eV" type="date"></label>
           <button id="eB" class="pri" style="width:auto;height:38px;padding:0 18px">Registrar</button>
         </div>
+        <label class="ck" style="margin-top:10px"><input type="checkbox" id="eG"> Reposición por garantía <span class="mu" style="font-size:12px">(no cambia el costo promedio)</span></label>
         <p class="msg" id="eM"></p>
       </div>
       <div class="box">
@@ -146,6 +149,25 @@
           <tbody id="iT"></tbody>
         </table></div>
         <p class="mu" id="iV" style="font-size:13px;margin:10px 0 0"></p>
+      </div>
+    </section>
+
+    <!-- GARANTÍAS -->
+    <section id="s-gar" class="oculto">
+      <div class="box" style="margin-bottom:14px">
+        <h3>Registrar garantía o daño</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label style="flex:2;min-width:200px"><span class="lb">Producto</span><select id="gP" style="width:100%"></select></label>
+          <label><span class="lb">Cantidad</span><input id="gQ" type="number" min="1" step="1" value="1" style="width:80px"></label>
+          <label><span class="lb">Tipo</span><select id="gT"><option value="cambio">Cambio por garantía</option><option value="danado">Dañado en tienda</option></select></label>
+          <label style="flex:2;min-width:180px"><span class="lb">Motivo</span><input id="gN" placeholder="No prende, sabe a quemado…" style="width:100%"></label>
+          <button id="gB" class="pri" style="width:auto;height:38px;padding:0 18px">Registrar</button>
+        </div>
+        <p class="msg" id="gM"></p>
+      </div>
+      <div id="gAdmin" class="oculto">
+        <div class="box" id="gR" style="margin-bottom:14px"></div>
+        <div class="box" id="gL"></div>
       </div>
     </section>
 
@@ -172,6 +194,37 @@
       <div class="box"><div id="vL"></div><button id="mas" class="oculto" style="width:100%;margin-top:10px">Ver más ventas</button></div>
     </section>
 
+    <!-- DINERO -->
+    <section id="s-din" class="oculto">
+      <div class="kps">
+        <div class="kp"><span class="mu">💵 Efectivo</span><b id="sE">$0</b></div>
+        <div class="kp"><span class="mu">📱 Nequi</span><b id="sN">$0</b></div>
+        <div class="kp"><span class="mu">Total</span><b id="sT">$0</b></div>
+      </div>
+      <div class="box" style="margin-bottom:12px">
+        <h3>Registrar movimiento</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label style="min-width:190px"><span class="lb">Tipo</span>
+            <select id="mT" style="width:100%">
+              <option value="gasto">Gasto del negocio</option>
+              <option value="proveedor">Pago a proveedor</option>
+              <option value="retiro">Retiro del dueño</option>
+              <option value="ingreso">Ingreso (base o aporte)</option>
+              <option value="traslado">Pasar efectivo a Nequi</option>
+            </select>
+          </label>
+          <label id="mCl"><span class="lb" id="mClt">De dónde</span><select id="mC"><option value="efectivo">Efectivo</option><option value="nequi">Nequi</option></select></label>
+          <label><span class="lb">Monto</span><input id="mM" type="number" min="1" step="1000" style="width:120px"></label>
+          <label><span class="lb">Quién</span><input id="mP" style="width:120px"></label>
+          <label style="flex:1;min-width:160px"><span class="lb">Nota</span><input id="mN" placeholder="Recibo de luz" style="width:100%"></label>
+          <button id="mB" class="pri" style="width:auto;height:38px;padding:0 18px">Registrar</button>
+        </div>
+        <p class="msg" id="mMsg"></p>
+      </div>
+      <div class="box" id="dD" style="margin-bottom:12px"></div>
+      <div class="box" id="mL"></div>
+    </section>
+
     <!-- COMISIONES -->
     <section id="s-com" class="oculto">
       <div class="coms" id="cL"></div>
@@ -181,9 +234,8 @@
 </div>
 
 <script>
-  // ✏️ Pon aquí los datos de tu proyecto (Supabase → Project Settings → API)
- const SUPABASE_URL = "https://tugwensfpuagsggersvw.supabase.co";
-const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
+  const SUPABASE_URL = "https://tugwensfpuagsggersvw.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
 
   // ✏️ Ajustes
   const DOMI = 5000;          // lo que se le paga al repartidor
@@ -194,7 +246,7 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
   // ---------- De aquí para abajo no necesitas tocar nada ----------
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const $ = id => document.getElementById(id);
-  const f = n => "$" + Math.round(Number(n) || 0).toLocaleString("es-CO");
+  const f = n => { n = Math.round(Number(n) || 0); return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("es-CO"); };
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const norm = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const sum = (a, k) => a.reduce((s, x) => s + Number(x[k] || 0), 0);
@@ -207,56 +259,91 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
     return d.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: d.getFullYear() !== hoy.getFullYear() ? "numeric" : undefined }) + " · " + h;
   }
 
-  let PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [];
-  let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false;
+  let ROL = null, PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [], MOVS = [], GARS = [];
+  let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0;
 
-  // ----- Sesión -----
-  db.auth.onAuthStateChange((_e, s) => setTimeout(() => pantalla(!!s), 0));
-  function pantalla(ok) {
-    $("vLogin").classList.toggle("oculto", ok);
-    $("vApp").classList.toggle("oculto", !ok);
-    if (ok && !cargado) { cargado = true; cargarTodo(); }
-    if (!ok) { cargado = false; C = {}; }
+  // ----- Sesión y rol -----
+  db.auth.onAuthStateChange((_e, s) => setTimeout(() => pantalla(s), 0));
+  async function pantalla(s) {
+    if (!s) {
+      ROL = null; cargado = false; C = {};
+      $("vLogin").classList.remove("oculto"); $("vApp").classList.add("oculto");
+      return;
+    }
+    $("vLogin").classList.add("oculto"); $("vApp").classList.remove("oculto");
+    if (cargado) return;
+    cargado = true;
+    const { data, error } = await db.rpc("mi_rol");
+    ROL = error ? null : data;
+    $("quien").textContent = ROL === "admin" ? "Dueño" : ROL === "caja" ? "Caja" : "";
+    if (!ROL) {
+      $("tabs").innerHTML = "";
+      document.querySelectorAll("main > section").forEach(x => x.classList.add("oculto"));
+      $("sinRol").classList.remove("oculto");
+      return;
+    }
+    $("sinRol").classList.add("oculto");
+    $("gAdmin").classList.toggle("oculto", ROL !== "admin");
+    pintarTabs();
+    await cargarVendedores();
+    irA("caja");
   }
   $("fLogin").onsubmit = async e => {
     e.preventDefault();
     say("mLogin", "Entrando…", true);
     const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pass").value });
-    if (error) say("mLogin", limpiar(error.message).includes("conexión") ? limpiar(error.message) : "Correo o contraseña incorrectos.");
+    if (error) say("mLogin", /fetch|network/i.test(error.message) ? limpiar(error.message) : "Correo o contraseña incorrectos.");
     else $("mLogin").textContent = "";
   };
   $("salir").onclick = () => db.auth.signOut();
 
-  // ----- Pestañas -----
-  document.querySelectorAll(".tab").forEach(b => b.onclick = async () => {
-    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
-    ["caja", "inv", "ven", "com"].forEach(s => $("s-" + s).classList.toggle("oculto", s !== b.dataset.t));
-    const t = b.dataset.t;
-    if (t === "caja" || t === "inv") { await cargarCatalogo(); pintarCaja(); pintarInv(); }
+  // ----- Pestañas según el rol -----
+  const TABS = {
+    admin: [["caja", "Caja"], ["inv", "Inventario"], ["gar", "Garantías"], ["ven", "Ventas"], ["din", "Dinero"], ["com", "Comisiones"]],
+    caja:  [["caja", "Caja"], ["gar", "Garantías"]]
+  };
+  function pintarTabs() { $("tabs").innerHTML = TABS[ROL].map(([id, n]) => `<button class="tab" data-t="${id}">${n}</button>`).join(""); }
+  $("tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) irA(b.dataset.t); };
+  async function irA(t) {
+    if (!TABS[ROL].some(([id]) => id === t)) t = "caja";
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.dataset.t === t));
+    ["caja", "inv", "gar", "ven", "din", "com"].forEach(s => $("s-" + s).classList.toggle("oculto", s !== t));
+    if (t === "caja" || t === "inv" || t === "gar") {
+      await cargarCatalogo(); pintarCaja(); pintarSelects();
+      if (ROL === "admin") pintarInv();
+    }
+    if (t === "gar" && ROL === "admin") cargarGarantias();
     if (t === "ven") cargarVentas();
+    if (t === "din") cargarDinero();
     if (t === "com") cargarComisiones();
-  });
-
-  // ----- Carga de datos -----
-  async function cargarTodo() {
-    await Promise.all([cargarCatalogo(), cargarVendedores()]);
-    pintarCaja(); pintarInv(); cargarVentas(); cargarComisiones();
   }
+
+  // ----- Datos -----
   const rank = c => { const i = ORDEN.indexOf(c); return i < 0 ? 99 : i; };
   async function cargarCatalogo() {
-    const [p, c] = await Promise.all([
+    const q = [
       db.from("productos").select("*").eq("activo", true),
       db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
-    ]);
-    if (p.error || c.error) { alert("Error cargando productos: " + limpiar((p.error || c.error).message)); return; }
-    PRODS = p.data.sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
-    COMBOS = c.data;
+    ];
+    if (ROL === "admin") q.push(db.from("costos").select("producto_id, costo"));
+    const r = await Promise.all(q);
+    const err = r.find(x => x.error);
+    if (err) { alert("Error cargando productos: " + limpiar(err.error.message)); return; }
+    const costos = {};
+    if (r[2]) r[2].data.forEach(c => costos[c.producto_id] = Number(c.costo));
+    PRODS = r[0].data.map(p => ({ ...p, costo: costos[p.id] || 0 }))
+      .sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
+    COMBOS = r[1].data;
   }
   async function cargarVendedores() {
     const { data, error } = await db.from("vendedores").select("*").eq("activo", true).order("nombre");
     if (error) { alert(limpiar(error.message)); return; }
     VENDS = data;
     $("vend").innerHTML = '<option value="">Elegir</option>' + VENDS.map(v => `<option value="${v.id}">${esc(v.nombre)}</option>`).join("");
+  }
+  function pintarSelects() {
+    const opts = PRODS.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
+    ["eP", "gP"].forEach(id => { const v = $(id).value; $(id).innerHTML = opts; if (v) $(id).value = v; });
   }
 
   // ----- Caja -----
@@ -287,6 +374,8 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
       <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${stock <= 0 ? "Agotado" : stock + " und"}</span></div></button>`;
   }
   function pintarCaja() {
+    // Quita del carrito lo que ya no exista
+    Object.keys(C).forEach(k => { const [t, id] = k.split("-"); if (!(t === "p" ? prod(+id) : combo(+id))) delete C[k]; });
     const cs = ["Todos", ...new Set(PRODS.map(p => p.categoria)), ...(COMBOS.length ? [PROMO] : [])];
     $("cats").innerHTML = cs.map(c => `<button class="cat${c === cat ? " on" : ""}" data-c="${esc(c)}">${c === PROMO ? "🔥 " : ""}${esc(c)}</button>`).join("");
     const q = norm($("q").value.trim());
@@ -343,16 +432,14 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
     $("cobrar").disabled = false;
     if (error) return say("msg", limpiar(error.message));
     C = {}; $("dom").checked = false; manual = false;
-    await cargarCatalogo(); pintarCaja(); pintarInv();
+    await cargarCatalogo(); pintarCaja(); pintarSelects();
+    if (ROL === "admin") pintarInv();
     say("msg", "Venta registrada por " + f(total) + ".", true);
   };
 
-  // ----- Inventario -----
-  function ponerCosto() { const p = prod(+$("eP").value); $("eK").value = p && Number(p.costo) > 0 ? Math.round(p.costo) : ""; }
+  // ----- Inventario (dueños) -----
+  function ponerCosto() { const p = prod(+$("eP").value); $("eK").value = p && p.costo > 0 ? Math.round(p.costo) : ""; }
   function pintarInv() {
-    const sel = $("eP").value;
-    $("eP").innerHTML = PRODS.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
-    if (sel) $("eP").value = sel;
     if (!$("eK").value) ponerCosto();
     const ic = $("iC").value || "Todas", cs = ["Todas", ...new Set(PRODS.map(p => p.categoria))];
     $("iC").innerHTML = cs.map(c => `<option>${esc(c)}</option>`).join("");
@@ -360,30 +447,74 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
     const L = PRODS.filter(p => $("iC").value === "Todas" || p.categoria === $("iC").value);
     $("iT").innerHTML = L.map(p => `<tr><td>${esc(p.nombre)}</td><td>${f(p.costo)}</td><td>${f(p.precio)}</td><td>${f(p.comision)}</td>
       <td>${p.stock <= 0 ? '<span class="pill">Agotado</span>' : p.stock + (p.stock <= p.stock_minimo ? ' <span class="pill">pedir</span>' : "")}</td></tr>`).join("");
-    $("iV").textContent = "Valor del inventario a costo: " + f(L.reduce((a, p) => a + Number(p.costo) * p.stock, 0));
+    $("iV").textContent = "Valor del inventario a costo: " + f(L.reduce((a, p) => a + p.costo * p.stock, 0));
   }
   $("eP").onchange = () => { ponerCosto(); $("eM").textContent = ""; };
   $("iC").onchange = pintarInv;
+  $("eG").onchange = () => { $("eKl").classList.toggle("oculto", $("eG").checked); $("eM").textContent = ""; };
   $("eB").onclick = async () => {
-    const id = +$("eP").value, q = parseInt($("eQ").value, 10), k = Number($("eK").value);
+    const id = +$("eP").value, q = parseInt($("eQ").value, 10), k = Number($("eK").value), g = $("eG").checked;
     if (!q || q < 1) return say("eM", "Escribe una cantidad mayor que cero.");
-    if ($("eK").value === "" || k < 0) return say("eM", "Escribe el costo por unidad.");
-    const antes = Number(prod(id).costo);
+    if (!g && ($("eK").value === "" || k < 0)) return say("eM", "Escribe el costo por unidad.");
+    const antes = prod(id).costo;
     $("eB").disabled = true;
     const { error } = await db.rpc("registrar_entrada", {
-      p_producto: id, p_cantidad: q, p_costo: k,
-      p_lote: $("eL").value.trim() || null, p_vencimiento: $("eV").value || null
+      p_producto: id, p_cantidad: q, p_costo: g ? null : k,
+      p_lote: $("eL").value.trim() || null, p_vencimiento: $("eV").value || null, p_garantia: g
     });
     $("eB").disabled = false;
     if (error) return say("eM", limpiar(error.message));
     await cargarCatalogo();
     const n = prod(id);
-    say("eM", `Entraron ${q} und de ${n.nombre}. Stock: ${n.stock}. Costo promedio: ${f(antes)} → ${f(n.costo)}`, true);
+    say("eM", g
+      ? `Entraron ${q} und de ${n.nombre} por garantía. Stock: ${n.stock}. El costo promedio sigue en ${f(n.costo)}.`
+      : `Entraron ${q} und de ${n.nombre}. Stock: ${n.stock}. Costo promedio: ${f(antes)} → ${f(n.costo)}`, true);
     $("eQ").value = ""; $("eL").value = ""; $("eV").value = "";
+    $("eG").checked = false; $("eKl").classList.remove("oculto");
     pintarInv(); pintarCaja();
   };
 
-  // ----- Ventas -----
+  // ----- Garantías -----
+  $("gB").onclick = async () => {
+    const id = +$("gP").value, q = parseInt($("gQ").value, 10), p = prod(id);
+    if (!q || q < 1) return say("gM", "Escribe una cantidad mayor que cero.");
+    if (p && p.stock < q) return say("gM", "No hay suficiente stock de ese producto.");
+    $("gB").disabled = true;
+    const { error } = await db.rpc("registrar_garantia", {
+      p_producto: id, p_cantidad: q, p_tipo: $("gT").value, p_motivo: $("gN").value.trim() || null
+    });
+    $("gB").disabled = false;
+    if (error) return say("gM", limpiar(error.message));
+    say("gM", `Registrado: ${q} × ${p.nombre}. Salió del inventario.`, true);
+    $("gN").value = ""; $("gQ").value = 1;
+    await cargarCatalogo(); pintarCaja(); pintarSelects();
+    if (ROL === "admin") { pintarInv(); cargarGarantias(); }
+  };
+  async function cargarGarantias() {
+    const { data, error } = await db.from("garantias")
+      .select("id, cantidad, tipo, costo_unitario, motivo, creado_en, productos(nombre)")
+      .order("creado_en", { ascending: false }).limit(1000);
+    if (error) { $("gL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
+    GARS = data;
+    const per = GARS.filter(g => g.tipo !== "reposicion").reduce((a, g) => a + g.cantidad * g.costo_unitario, 0);
+    const rec = GARS.filter(g => g.tipo === "reposicion").reduce((a, g) => a + g.cantidad * g.costo_unitario, 0);
+    $("gR").innerHTML = `<h3>Pérdidas por garantías</h3>
+      <div class="br"><span class="mu">Costo de unidades dañadas o cambiadas</span><span>${f(per)}</span></div>
+      <div class="br"><span class="mu">− Repuestas por el proveedor</span><span style="color:var(--g)">${f(rec)}</span></div>
+      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px"><span>Pérdida real</span>
+      <span style="color:${per - rec > 0 ? "var(--r)" : "var(--g)"}">${f(per - rec)}</span></div>
+      <p class="mu" style="font-size:12px;margin:6px 0 0">Esta pérdida se resta de la ganancia en Ventas.</p>`;
+    const L = { cambio: "Cambio por garantía", danado: "Dañado en tienda", reposicion: "Repuesto por proveedor" };
+    $("gL").innerHTML = "<h3>Historial</h3>" + (GARS.length ? GARS.slice(0, 100).map(g => `<div class="ln"><div>
+      <div>${g.cantidad} × ${esc(g.productos?.nombre || "")}</div>
+      <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.motivo ? " · " + esc(g.motivo) : ""}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+      <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${L[g.tipo]}</span>
+      <span style="font-size:12px;color:${g.tipo === "reposicion" ? "var(--g)" : "var(--r)"}">${g.tipo === "reposicion" ? "+" : "−"}${f(g.cantidad * g.costo_unitario)}</span>
+      </div></div>`).join("") : '<p class="mu">Todavía no hay garantías registradas.</p>');
+  }
+
+  // ----- Ventas (dueños) -----
   function rango() {
     const v = $("per").value, n = new Date();
     let a = null, b = null;
@@ -398,15 +529,19 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
   }
   async function cargarVentas() {
     const [a, b] = rango();
+    const filtro = q => { if (a) q = q.gte("creado_en", a); if (b) q = q.lte("creado_en", b); return q; };
     $("vL").innerHTML = '<p class="mu">Cargando…</p>';
+    const [g, ga] = await Promise.all([
+      filtro(db.from("movimientos_dinero").select("monto").eq("tipo", "gasto")),
+      filtro(db.from("garantias").select("tipo, cantidad, costo_unitario"))
+    ]);
+    GASTOS = g.error ? 0 : sum(g.data, "monto");
+    PERDIDAS = ga.error ? 0 : ga.data.reduce((s, x) => s + (x.tipo === "reposicion" ? -1 : 1) * x.cantidad * x.costo_unitario, 0);
     let todas = [], desde = 0;
     while (true) {
-      let q = db.from("ventas")
+      const { data, error } = await filtro(db.from("ventas")
         .select("id, creado_en, metodo_pago, domicilio, domi_tienda, total, costo_total, comision_total, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
-        .order("creado_en", { ascending: false }).range(desde, desde + 999);
-      if (a) q = q.gte("creado_en", a);
-      if (b) q = q.lte("creado_en", b);
-      const { data, error } = await q;
+        .order("creado_en", { ascending: false }).range(desde, desde + 999));
       if (error) { $("vL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
       todas = todas.concat(data);
       if (data.length < 1000) break;
@@ -415,14 +550,17 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
     VENTAS = todas; lim = 20; pintarVentas();
   }
   function pintarVentas() {
-    const H = VENTAS, V = sum(H, "total"), K = sum(H, "costo_total"), CO = sum(H, "comision_total"), D = sum(H, "domi_tienda"), G = V - K - CO - D;
+    const H = VENTAS, V = sum(H, "total"), K = sum(H, "costo_total"), CO = sum(H, "comision_total"), D = sum(H, "domi_tienda");
+    const G = V - K - CO - D - GASTOS - PERDIDAS;
     $("k1").textContent = H.length; $("k2").textContent = f(V); $("k3").textContent = f(G);
     $("bd").innerHTML = `<h3>De dónde sale la ganancia</h3>
       <div class="br"><span>Total vendido</span><span>${f(V)}</span></div>
       <div class="br mu"><span>− Costo de la mercancía</span><span>${f(K)}</span></div>
       <div class="br mu"><span>− Comisiones</span><span>${f(CO)}</span></div>
       <div class="br mu"><span>− Domis pagados por la tienda</span><span>${f(D)}</span></div>
-      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px;color:var(--g)"><span>Ganancia</span><span>${f(G)}</span></div>`;
+      <div class="br mu"><span>− Gastos del negocio</span><span>${f(GASTOS)}</span></div>
+      <div class="br mu"><span>− Pérdidas por garantías</span><span>${f(PERDIDAS)}</span></div>
+      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px;color:var(--g)"><span>Ganancia real</span><span>${f(G)}</span></div>`;
     $("vL").innerHTML = `<h3>Historial de ventas <span class="mu" style="font-weight:400">(${H.length})</span></h3>` +
       (H.length ? H.slice(0, lim).map(s => `<div class="ln" style="align-items:flex-start"><div>
         <div>${s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ")}</div>
@@ -435,11 +573,67 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
   $("d2").onchange = cargarVentas;
   $("mas").onclick = () => { lim += 20; pintarVentas(); };
 
-  // ----- Comisiones -----
+  // ----- Dinero (dueños) -----
+  const TIPOS = { gasto: "Gasto del negocio", proveedor: "Pago a proveedor", retiro: "Retiro del dueño", ingreso: "Ingreso", traslado: "Efectivo → Nequi" };
+  async function cargarDinero() {
+    const [d, m] = await Promise.all([
+      db.rpc("desglose_dinero"),
+      db.from("movimientos_dinero").select("*").order("creado_en", { ascending: false }).limit(100)
+    ]);
+    if (d.error || m.error) { $("mL").innerHTML = `<p style="color:var(--r)">${esc(limpiar((d.error || m.error).message))}</p>`; return; }
+    const x = {}; Object.entries(d.data).forEach(([k, v]) => x[k] = Number(v) || 0);
+    const E = x.ventas_efectivo - x.domis - x.com_efectivo + x.ing_efectivo - x.sal_efectivo - x.traslados;
+    const N = x.ventas_nequi - x.com_nequi + x.ing_nequi - x.sal_nequi + x.traslados;
+    [["sE", E], ["sN", N], ["sT", E + N]].forEach(([id, v]) => { $(id).textContent = f(v); $(id).style.color = v < 0 ? "var(--r)" : ""; });
+    const col = (t, filas, tot) => `<div><b>${t}</b>${filas.map(([l, v]) => `<div class="br" style="font-size:13px"><span class="mu">${l}</span><span>${v < 0 ? "−" : "+"} ${f(Math.abs(v))}</span></div>`).join("")}
+      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:6px"><span>Saldo</span><span>${f(tot)}</span></div></div>`;
+    $("dD").innerHTML = '<h3>De dónde sale cada saldo</h3><div class="dos" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+      col("Efectivo", [["Ventas en efectivo", x.ventas_efectivo], ["Ingresos", x.ing_efectivo], ["Salidas", -x.sal_efectivo], ["Comisiones pagadas", -x.com_efectivo], ["Domis pagados", -x.domis], ["Pasado a Nequi", -x.traslados]], E) +
+      col("Nequi", [["Ventas por Nequi", x.ventas_nequi], ["Ingresos", x.ing_nequi], ["Salidas", -x.sal_nequi], ["Comisiones pagadas", -x.com_nequi], ["Recibido del efectivo", x.traslados]], N) + "</div>";
+    MOVS = m.data;
+    $("mL").innerHTML = "<h3>Movimientos de dinero</h3>" + (MOVS.length ? MOVS.map(v => {
+      const entra = v.tipo === "ingreso", tr = v.tipo === "traslado";
+      return `<div class="ln"><div>
+        <div>${TIPOS[v.tipo]}${v.nota ? " · " + esc(v.nota) : ""}</div>
+        <div class="mu" style="font-size:12px">${fd(v.creado_en)} · ${tr ? "Efectivo → Nequi" : v.cuenta === "efectivo" ? "Efectivo" : "Nequi"}${v.persona ? " · " + esc(v.persona) : ""}</div>
+        </div><div style="display:flex;gap:8px;align-items:center;white-space:nowrap">
+        <strong style="color:${tr ? "var(--m)" : entra ? "var(--g)" : "var(--r)"}">${tr ? "" : entra ? "+" : "−"}${f(v.monto)}</strong>
+        <button class="x" data-del="${v.id}" title="Eliminar">✕</button></div></div>`;
+    }).join("") : '<p class="mu">Todavía no hay movimientos.</p>');
+  }
+  $("mT").onchange = () => {
+    const t = $("mT").value;
+    $("mCl").classList.toggle("oculto", t === "traslado");
+    $("mClt").textContent = t === "ingreso" ? "A dónde" : "De dónde";
+    $("mMsg").textContent = "";
+  };
+  $("mB").onclick = async () => {
+    const t = $("mT").value, m = Math.round(Number($("mM").value));
+    if (!(m > 0)) return say("mMsg", "Escribe un monto mayor que cero.");
+    $("mB").disabled = true;
+    const { error } = await db.from("movimientos_dinero").insert({
+      tipo: t, cuenta: t === "traslado" ? "efectivo" : $("mC").value, monto: m,
+      persona: $("mP").value.trim() || null, nota: $("mN").value.trim() || null
+    });
+    $("mB").disabled = false;
+    if (error) return say("mMsg", limpiar(error.message));
+    say("mMsg", `Registrado: ${TIPOS[t]} por ${f(m)}.`, true);
+    $("mM").value = ""; $("mN").value = "";
+    cargarDinero();
+  };
+  $("mL").onclick = async e => {
+    const b = e.target.closest("[data-del]"); if (!b) return;
+    if (!confirm("¿Eliminar este movimiento? Esto cambia los saldos.")) return;
+    const { error } = await db.from("movimientos_dinero").delete().eq("id", +b.dataset.del);
+    if (error) return alert(limpiar(error.message));
+    cargarDinero();
+  };
+
+  // ----- Comisiones (dueños) -----
   async function cargarComisiones() {
     const [p, h] = await Promise.all([
       db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)").is("pago_comision_id", null),
-      db.from("pagos_comision").select("id, monto, num_ventas, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
+      db.from("pagos_comision").select("id, monto, num_ventas, cuenta, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
     ]);
     if (p.error || h.error) { $("cL").innerHTML = `<p style="color:var(--r)">${esc(limpiar((p.error || h.error).message))}</p>`; return; }
     PEND = p.data; PAGOS = h.data; pintarComisiones();
@@ -455,13 +649,18 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
         <div class="ln"><span class="mu">Ventas pendientes</span><span>${ps.length}</span></div>
         <div class="ln"><span class="mu">Unidades</span><span>${u}</span></div>
         <div class="br" style="font-size:18px;font-weight:700;padding:10px 0"><span>Por pagar</span><span>${f(m)}</span></div>
-        ${m <= 0 ? '<p class="mu" style="margin:0">Está al día.</p>'
-          : conf[v.id] ? `<button class="pri verde" data-pay="${v.id}">Confirmar pago de ${f(m)}</button><button data-cancel="${v.id}" style="width:100%;margin-top:6px">Cancelar</button>`
+        ${m <= 0 ? '<p style="margin:0;color:var(--g)">Está al día.</p>'
+          : conf[v.id] ? `<p class="mu" style="font-size:13px;margin:0 0 6px">¿De dónde sale la plata?</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <button class="pri verde" data-pay="${v.id}" data-cta="efectivo">Efectivo</button>
+              <button class="pri verde" data-pay="${v.id}" data-cta="nequi">Nequi</button></div>
+              <button data-cancel="${v.id}" style="width:100%;margin-top:6px">Cancelar</button>`
           : `<button class="pri" data-ask="${v.id}">Pagar comisión</button>`}
       </div>`;
     }).join("");
     $("hL").innerHTML = "<h3>Historial de pagos</h3>" + (PAGOS.length ? PAGOS.map(x => `<div class="ln"><div>
-      <div>${esc(x.vendedores?.nombre || "")}</div><div class="mu" style="font-size:12px">${fd(x.creado_en)} · ${x.num_ventas} ventas</div>
+      <div>${esc(x.vendedores?.nombre || "")}</div>
+      <div class="mu" style="font-size:12px">${fd(x.creado_en)} · ${x.num_ventas} ventas · ${x.cuenta === "nequi" ? "Nequi" : "Efectivo"}</div>
       </div><strong>${f(x.monto)}</strong></div>`).join("") : '<p class="mu">Todavía no hay pagos registrados.</p>');
   }
   $("cL").onclick = async e => {
@@ -471,7 +670,7 @@ const SUPABASE_KEY = "sb_publishable_otmP9DN17EgBdMhcNjbhaQ_Lo6BFPDl";
     else if (b.dataset.pay) {
       b.disabled = true;
       const id = +b.dataset.pay;
-      const { error } = await db.rpc("pagar_comision", { p_vendedor: id });
+      const { error } = await db.rpc("pagar_comision", { p_vendedor: id, p_cuenta: b.dataset.cta });
       conf[id] = false;
       if (error) alert(limpiar(error.message));
       await cargarComisiones();
