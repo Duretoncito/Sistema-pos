@@ -60,6 +60,7 @@
   .coms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 12px; }
   .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
   .x { padding: 2px 9px; color: #9c9087; }
+  .dif { background: #faf3e6; border: 1px solid #efe3cc; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
   .oculto { display: none !important; }
   .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
   .login input { width: 100%; margin-bottom: 10px; }
@@ -96,10 +97,7 @@
   </header>
 
   <main>
-    <div id="sinRol" class="box oculto" style="max-width:420px;margin:40px auto;text-align:center">
-      <h3>Tu usuario no tiene permisos</h3>
-      <p class="mu" style="margin:0">Pídele a uno de los dueños que te asigne un rol en el sistema.</p>
-    </div>
+    <div id="sinRol" class="box oculto" style="max-width:420px;margin:40px auto;text-align:center"></div>
 
     <!-- CAJA -->
     <section id="s-caja" class="caja oculto">
@@ -157,14 +155,35 @@
       <div class="box" style="margin-bottom:14px">
         <h3>Registrar garantía o daño</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-          <label style="flex:2;min-width:200px"><span class="lb">Producto</span><select id="gP" style="width:100%"></select></label>
+          <label style="flex:2;min-width:240px"><span class="lb">Tipo</span>
+            <select id="gT" style="width:100%">
+              <option value="cambio">Cambio por garantía (el cliente trae un dañado)</option>
+              <option value="danado">Dañado en tienda (nunca se vendió)</option>
+            </select>
+          </label>
           <label><span class="lb">Cantidad</span><input id="gQ" type="number" min="1" step="1" value="1" style="width:80px"></label>
-          <label><span class="lb">Tipo</span><select id="gT"><option value="cambio">Cambio por garantía</option><option value="danado">Dañado en tienda</option></select></label>
-          <label style="flex:2;min-width:180px"><span class="lb">Motivo</span><input id="gN" placeholder="No prende, sabe a quemado…" style="width:100%"></label>
+        </div>
+        <div id="gCambio" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <label style="flex:1;min-width:200px"><span class="lb">Producto que devuelve el cliente</span><select id="gDev" style="width:100%"></select></label>
+          <label style="flex:1;min-width:200px"><span class="lb">Producto que se le entrega</span><select id="gEnt" style="width:100%"></select></label>
+        </div>
+        <div id="gDifBox" class="dif">
+          <div id="gDifRow" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <label><span class="lb">Diferencia a cobrar</span><input id="gDv" type="number" min="0" step="500" style="width:130px"></label>
+            <label><span class="lb">Cómo paga</span><select id="gDp"><option value="efectivo">Efectivo</option><option value="nequi">Nequi</option></select></label>
+          </div>
+          <p id="gDifMsg" class="mu" style="font-size:13px;margin:6px 0 0"></p>
+        </div>
+        <div id="gDanado" class="oculto" style="margin-top:8px">
+          <label><span class="lb">Producto dañado</span><select id="gDan" style="width:100%"></select></label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+          <label style="flex:1;min-width:200px"><span class="lb">Motivo</span><input id="gN" placeholder="No prende, sabe a quemado…" style="width:100%"></label>
           <button id="gB" class="pri" style="width:auto;height:38px;padding:0 18px">Registrar</button>
         </div>
         <p class="msg" id="gM"></p>
       </div>
+      <div class="box oculto" id="gRes" style="margin-bottom:14px;border-color:var(--d)"></div>
       <div id="gAdmin" class="oculto">
         <div class="box" id="gR" style="margin-bottom:14px"></div>
         <div class="box" id="gL"></div>
@@ -260,11 +279,16 @@
   }
 
   let ROL = null, PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [], MOVS = [], GARS = [];
-  let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0;
+  let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0, difManual = false;
 
   // ----- Sesión y rol -----
-  // ----- Sesión y rol -----
-  db.auth.onAuthStateChange((_e, s) => setTimeout(() => pantalla(s), 0));
+  let iniciando = false;
+  function mostrarAviso(t, m) {
+    $("tabs").innerHTML = "";
+    document.querySelectorAll("main > section").forEach(x => x.classList.add("oculto"));
+    $("sinRol").innerHTML = `<h3>${esc(t)}</h3><p class="mu" style="margin:0">${esc(m)}</p>`;
+    $("sinRol").classList.remove("oculto");
+  }
   async function pantalla(s) {
     if (!s) {
       ROL = null; cargado = false; C = {};
@@ -272,23 +296,34 @@
       return;
     }
     $("vLogin").classList.add("oculto"); $("vApp").classList.remove("oculto");
-    if (cargado) return;
-    cargado = true;
-    const { data, error } = await db.rpc("mi_rol");
-    ROL = error ? null : data;
-    $("quien").textContent = ROL === "admin" ? "Dueño" : ROL === "caja" ? "Caja" : "";
-    if (!ROL) {
-      $("tabs").innerHTML = "";
-      document.querySelectorAll("main > section").forEach(x => x.classList.add("oculto"));
-      $("sinRol").classList.remove("oculto");
-      return;
+    if (cargado || iniciando) return;
+    iniciando = true;
+    try {
+      const { data, error } = await Promise.race([
+        db.rpc("mi_rol"),
+        new Promise((_, no) => setTimeout(() => no(new Error("La base de datos no respondió a tiempo. Recarga la página.")), 15000))
+      ]);
+      if (error) throw error;
+      ROL = data;
+      $("quien").textContent = ROL === "admin" ? "Dueño" : ROL === "caja" ? "Caja" : "";
+      if (!ROL) { mostrarAviso("Tu usuario no tiene permisos", "Pídele a uno de los dueños que te asigne un rol en el sistema."); return; }
+      $("sinRol").classList.add("oculto");
+      $("gAdmin").classList.toggle("oculto", ROL !== "admin");
+      pintarTabs();
+      await cargarVendedores();
+      await irA("caja");
+      cargado = true;
+    } catch (e) {
+      mostrarAviso("No se pudo cargar el sistema", limpiar(e.message || String(e)));
+    } finally {
+      iniciando = false;
     }
-    $("sinRol").classList.add("oculto");
-    $("gAdmin").classList.toggle("oculto", ROL !== "admin");
-    pintarTabs();
-    await cargarVendedores();
-    irA("caja");
   }
+  db.auth.getSession().then(({ data }) => pantalla(data.session));
+  db.auth.onAuthStateChange((ev, s) => {
+    if (ev === "SIGNED_IN" || ev === "SIGNED_OUT") setTimeout(() => pantalla(s), 0);
+  });
+
   $("fLogin").onsubmit = async e => {
     e.preventDefault();
     say("mLogin", "Entrando…", true);
@@ -313,7 +348,7 @@
       await cargarCatalogo(); pintarCaja(); pintarSelects();
       if (ROL === "admin") pintarInv();
     }
-    if (t === "gar" && ROL === "admin") cargarGarantias();
+    if (t === "gar") { pintarDif(); if (ROL === "admin") cargarGarantias(); }
     if (t === "ven") cargarVentas();
     if (t === "din") cargarDinero();
     if (t === "com") cargarComisiones();
@@ -344,7 +379,7 @@
   }
   function pintarSelects() {
     const opts = PRODS.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("");
-    ["eP", "gP"].forEach(id => { const v = $(id).value; $(id).innerHTML = opts; if (v) $(id).value = v; });
+    ["eP", "gDev", "gEnt", "gDan"].forEach(id => { const v = $(id).value; $(id).innerHTML = opts; if (v) $(id).value = v; });
   }
 
   // ----- Caja -----
@@ -375,7 +410,6 @@
       <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${stock <= 0 ? "Agotado" : stock + " und"}</span></div></button>`;
   }
   function pintarCaja() {
-    // Quita del carrito lo que ya no exista
     Object.keys(C).forEach(k => { const [t, id] = k.split("-"); if (!(t === "p" ? prod(+id) : combo(+id))) delete C[k]; });
     const cs = ["Todos", ...new Set(PRODS.map(p => p.categoria)), ...(COMBOS.length ? [PROMO] : [])];
     $("cats").innerHTML = cs.map(c => `<button class="cat${c === cat ? " on" : ""}" data-c="${esc(c)}">${c === PROMO ? "🔥 " : ""}${esc(c)}</button>`).join("");
@@ -476,24 +510,71 @@
   };
 
   // ----- Garantías -----
+  function difAuto() {
+    const q = parseInt($("gQ").value, 10) || 1, a = prod(+$("gDev").value), b = prod(+$("gEnt").value);
+    return a && b ? Math.max(0, (Number(b.precio) - Number(a.precio)) * q) : 0;
+  }
+  function pintarDif() {
+    const cambio = $("gT").value === "cambio";
+    $("gCambio").classList.toggle("oculto", !cambio);
+    $("gDanado").classList.toggle("oculto", cambio);
+    $("gDifBox").classList.toggle("oculto", !cambio);
+    if (!cambio) return;
+    const a = prod(+$("gDev").value), b = prod(+$("gEnt").value);
+    if (!a || !b) return;
+    const hay = b.id !== a.id && Number(b.precio) > Number(a.precio);
+    $("gDifRow").classList.toggle("oculto", !hay);
+    if (!hay) {
+      $("gDifMsg").textContent = b.id === a.id
+        ? "Se entrega el mismo producto: no hay diferencia que cobrar."
+        : "El producto entregado vale igual o menos. No se cobra diferencia.";
+      return;
+    }
+    const auto = difAuto();
+    $("gDifMsg").textContent = `${f(b.precio)} − ${f(a.precio)} = ${f(auto)}`;
+    if (!difManual) $("gDv").value = auto;
+  }
+  ["gT", "gEnt", "gQ"].forEach(id => $(id).addEventListener("input", () => { difManual = false; $("gM").textContent = ""; pintarDif(); }));
+  $("gDev").addEventListener("input", () => { $("gEnt").value = $("gDev").value; difManual = false; $("gM").textContent = ""; pintarDif(); });
+  $("gDv").oninput = () => { difManual = true; $("gM").textContent = ""; };
+
   $("gB").onclick = async () => {
-    const id = +$("gP").value, q = parseInt($("gQ").value, 10), p = prod(id);
+    const q = parseInt($("gQ").value, 10), cambio = $("gT").value === "cambio";
     if (!q || q < 1) return say("gM", "Escribe una cantidad mayor que cero.");
-    if (p && p.stock < q) return say("gM", "No hay suficiente stock de ese producto.");
+    const ent = prod(+(cambio ? $("gEnt").value : $("gDan").value));
+    const dev = cambio ? prod(+$("gDev").value) : null;
+    if (!ent) return;
+    if (ent.stock < q) return say("gM", `No hay suficiente stock de ${ent.nombre}.`);
+    const hayDif = cambio && !$("gDifRow").classList.contains("oculto");
+    const dif = hayDif ? Math.round(Number($("gDv").value) || 0) : 0;
+    if (dif < 0) return say("gM", "La diferencia no puede ser negativa.");
+    const cta = $("gDp").value;
     $("gB").disabled = true;
     const { error } = await db.rpc("registrar_garantia", {
-      p_producto: id, p_cantidad: q, p_tipo: $("gT").value, p_motivo: $("gN").value.trim() || null
+      p_producto: ent.id, p_cantidad: q, p_tipo: cambio ? "cambio" : "danado",
+      p_motivo: $("gN").value.trim() || null, p_devuelto: dev ? dev.id : null,
+      p_diferencia: dif, p_cuenta: cta
     });
     $("gB").disabled = false;
     if (error) return say("gM", limpiar(error.message));
-    say("gM", `Registrado: ${q} × ${p.nombre}. Salió del inventario.`, true);
-    $("gN").value = ""; $("gQ").value = 1;
-    await cargarCatalogo(); pintarCaja(); pintarSelects();
+
+    const pasos = [];
+    if (cambio) pasos.push([`El cliente devolvió ${q} × ${dev.nombre}`, "No vuelve al stock porque está dañado. Ya se había descontado cuando se vendió.", "var(--m)"]);
+    pasos.push([`Salió del inventario ${q} × ${ent.nombre}`, `Stock: ${ent.stock} → ${ent.stock - q}`, "var(--t)"]);
+    if (ROL === "admin") pasos.push([`Pérdida: ${f(ent.costo * q)}`, "Es el costo del producto que salió.", "var(--r)"]);
+    if (dif > 0) pasos.push([`Venta por diferencia: ${f(dif)} en ${cta === "nequi" ? "Nequi" : "efectivo"}`, "Entra al saldo y suma al total vendido.", "var(--g)"]);
+    $("gRes").innerHTML = "<h3>Lo que registró el sistema</h3>" + pasos.map(([t, s, c]) =>
+      `<div class="ln" style="justify-content:flex-start"><div><div style="color:${c}">${esc(t)}</div><div class="mu" style="font-size:12px">${esc(s)}</div></div></div>`).join("");
+    $("gRes").classList.remove("oculto");
+
+    say("gM", "Registrado.", true);
+    $("gN").value = ""; $("gQ").value = 1; difManual = false;
+    await cargarCatalogo(); pintarCaja(); pintarSelects(); pintarDif();
     if (ROL === "admin") { pintarInv(); cargarGarantias(); }
   };
   async function cargarGarantias() {
     const { data, error } = await db.from("garantias")
-      .select("id, cantidad, tipo, costo_unitario, motivo, creado_en, productos(nombre)")
+      .select("id, cantidad, tipo, costo_unitario, motivo, creado_en, venta_id, entregado:productos!producto_id(nombre), devuelto:productos!producto_devuelto_id(nombre)")
       .order("creado_en", { ascending: false }).limit(1000);
     if (error) { $("gL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
     GARS = data;
@@ -506,13 +587,17 @@
       <span style="color:${per - rec > 0 ? "var(--r)" : "var(--g)"}">${f(per - rec)}</span></div>
       <p class="mu" style="font-size:12px;margin:6px 0 0">Esta pérdida se resta de la ganancia en Ventas.</p>`;
     const L = { cambio: "Cambio por garantía", danado: "Dañado en tienda", reposicion: "Repuesto por proveedor" };
-    $("gL").innerHTML = "<h3>Historial</h3>" + (GARS.length ? GARS.slice(0, 100).map(g => `<div class="ln"><div>
-      <div>${g.cantidad} × ${esc(g.productos?.nombre || "")}</div>
-      <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.motivo ? " · " + esc(g.motivo) : ""}</div></div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-      <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${L[g.tipo]}</span>
-      <span style="font-size:12px;color:${g.tipo === "reposicion" ? "var(--g)" : "var(--r)"}">${g.tipo === "reposicion" ? "+" : "−"}${f(g.cantidad * g.costo_unitario)}</span>
-      </div></div>`).join("") : '<p class="mu">Todavía no hay garantías registradas.</p>');
+    $("gL").innerHTML = "<h3>Historial</h3>" + (GARS.length ? GARS.slice(0, 100).map(g => {
+      const ent = g.entregado?.nombre || "", dev = g.devuelto?.nombre || "";
+      const titulo = g.tipo === "cambio" && dev && dev !== ent ? `${g.cantidad} × ${esc(dev)} → ${esc(ent)}` : `${g.cantidad} × ${esc(ent)}`;
+      return `<div class="ln"><div>
+        <div>${titulo}</div>
+        <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.motivo ? " · " + esc(g.motivo) : ""}${g.venta_id ? " · con diferencia cobrada" : ""}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${L[g.tipo]}</span>
+        <span style="font-size:12px;color:${g.tipo === "reposicion" ? "var(--g)" : "var(--r)"}">${g.tipo === "reposicion" ? "+" : "−"}${f(g.cantidad * g.costo_unitario)}</span>
+        </div></div>`;
+    }).join("") : '<p class="mu">Todavía no hay garantías registradas.</p>');
   }
 
   // ----- Ventas (dueños) -----
@@ -565,7 +650,7 @@
     $("vL").innerHTML = `<h3>Historial de ventas <span class="mu" style="font-weight:400">(${H.length})</span></h3>` +
       (H.length ? H.slice(0, lim).map(s => `<div class="ln" style="align-items:flex-start"><div>
         <div>${s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ")}</div>
-        <div class="mu" style="font-size:12px">${fd(s.creado_en)} · ${esc(s.vendedores?.nombre || "")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}</div>
+        <div class="mu" style="font-size:12px">${fd(s.creado_en)} · ${esc(s.vendedores?.nombre || "Cambio por garantía")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}</div>
         </div><strong style="white-space:nowrap">${f(s.total)}</strong></div>`).join("") : '<p class="mu">No hay ventas en este periodo.</p>');
     $("mas").classList.toggle("oculto", H.length <= lim);
   }
@@ -633,7 +718,7 @@
   // ----- Comisiones (dueños) -----
   async function cargarComisiones() {
     const [p, h] = await Promise.all([
-      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)").is("pago_comision_id", null),
+      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)").is("pago_comision_id", null).not("vendedor_id", "is", null),
       db.from("pagos_comision").select("id, monto, num_ventas, cuenta, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
     ]);
     if (p.error || h.error) { $("cL").innerHTML = `<p style="color:var(--r)">${esc(limpiar((p.error || h.error).message))}</p>`; return; }
