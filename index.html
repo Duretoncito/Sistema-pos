@@ -263,6 +263,7 @@
   let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0;
 
   // ----- Sesión y rol -----
+  // ----- Sesión y rol -----
   db.auth.onAuthStateChange((_e, s) => setTimeout(() => pantalla(s), 0));
   async function pantalla(s) {
     if (!s) {
