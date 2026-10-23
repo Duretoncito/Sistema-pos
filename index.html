@@ -789,10 +789,10 @@
     cargarDinero();
   };
 
-  // ----- Comisiones (dueños) -----
+    // ----- Comisiones (dueños) -----
   async function cargarComisiones() {
     const [p, h] = await Promise.all([
-      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)")
+      db.from("ventas").select("vendedor_id, comision_total, total, metodo_pago, domi_tienda, venta_items(cantidad)")
         .is("pago_comision_id", null).eq("anulada", false).not("vendedor_id", "is", null),
       db.from("pagos_comision").select("id, monto, num_ventas, cuenta, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
     ]);
@@ -804,12 +804,20 @@
       const ps = PEND.filter(s => s.vendedor_id === v.id), m = sum(ps, "comision_total");
       const u = ps.reduce((a, s) => a + s.venta_items.reduce((b, i) => b + i.cantidad, 0), 0);
       const ult = PAGOS.find(x => x.vendedor_id === v.id);
+      const ef = ps.filter(s => s.metodo_pago === "Efectivo");
+      const efTotal = sum(ef, "total"), domis = sum(ps, "domi_tienda"), debe = efTotal - domis;
       return `<div class="box">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><div class="av">${esc((v.nombre[0] || "?").toUpperCase())}</div>
         <div><b>${esc(v.nombre)}</b><div class="mu" style="font-size:12px">Último pago: ${ult ? fd(ult.creado_en) : "ninguno"}</div></div></div>
         <div class="ln"><span class="mu">Ventas pendientes</span><span>${ps.length}</span></div>
         <div class="ln"><span class="mu">Unidades</span><span>${u}</span></div>
-        <div class="br" style="font-size:18px;font-weight:700;padding:10px 0"><span>Por pagar</span><span>${f(m)}</span></div>
+        <div class="br" style="font-size:18px;font-weight:700;padding:10px 0"><span>Comisión por pagar</span><span>${f(m)}</span></div>
+        <div class="dif" style="margin:0 0 10px">
+          <div class="br" style="font-size:13px"><span class="mu">Ventas en efectivo (${ef.length})</span><span>${f(efTotal)}</span></div>
+          ${domis ? `<div class="br" style="font-size:13px"><span class="mu">− Domis que pagó</span><span>${f(domis)}</span></div>` : ""}
+          <div class="br" style="font-weight:700"><span>Efectivo que debería tener</span><span>${f(debe)}</span></div>
+          ${m > 0 && debe > 0 ? `<div class="br mu" style="font-size:12px"><span>Si le descuentas su comisión</span><span>${f(debe - m)}</span></div>` : ""}
+        </div>
         ${m <= 0 ? '<p style="margin:0;color:var(--g)">Está al día.</p>'
           : conf[v.id] ? `<p class="mu" style="font-size:13px;margin:0 0 6px">¿De dónde sale la plata?</p>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
