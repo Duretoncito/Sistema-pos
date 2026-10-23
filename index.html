@@ -47,6 +47,7 @@
   .ck { display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .pri { background: var(--o); color: #fff; border-color: var(--o); font-weight: 600; width: 100%; padding: 12px; }
   .verde { background: var(--g); border-color: var(--g); }
+  .rojo { background: var(--r); border-color: var(--r); }
   .msg { font-size: 13px; min-height: 18px; margin: 8px 0 0; }
   .kps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
   .kp { background: #fff; border: 1px solid var(--b); border-radius: 14px; padding: 12px 14px; }
@@ -59,7 +60,7 @@
   .br { display: flex; justify-content: space-between; padding: 4px 0; }
   .coms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 12px; }
   .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
-  .x { padding: 2px 9px; color: #9c9087; }
+  .x { padding: 3px 10px; color: #7c6f64; font-size: 12px; }
   .dif { background: #faf3e6; border: 1px solid #efe3cc; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
   .oculto { display: none !important; }
   .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
@@ -109,10 +110,11 @@
       <div class="box">
         <h3>Venta actual</h3>
         <div id="cart"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 8px">
           <label><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
           <label><span class="lb">Pago</span><select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option></select></label>
         </div>
+        <label style="display:block;margin-bottom:12px"><span class="lb">Cliente (opcional)</span><input id="cli" placeholder="Nombre del cliente" style="width:100%"></label>
         <label class="ck"><input type="checkbox" id="dom"> Domicilio</label>
         <label class="ck" id="pdl" style="margin:8px 0 12px 25px;font-size:13px"><input type="checkbox" id="pd"> Pagamos el domi ($5.000)</label>
         <div class="br" style="font-size:20px;font-weight:700;border-top:1px solid var(--b);padding-top:10px"><span>Total a cobrar</span><span id="tot">$0</span></div>
@@ -166,6 +168,7 @@
         <div id="gCambio" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <label style="flex:1;min-width:200px"><span class="lb">Producto que devuelve el cliente</span><select id="gDev" style="width:100%"></select></label>
           <label style="flex:1;min-width:200px"><span class="lb">Producto que se le entrega</span><select id="gEnt" style="width:100%"></select></label>
+          <label style="flex:1;min-width:200px"><span class="lb">Cliente (opcional)</span><input id="gCli" placeholder="Nombre del cliente" style="width:100%"></label>
         </div>
         <div id="gDifBox" class="dif">
           <div id="gDifRow" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -203,6 +206,7 @@
           <label><span class="lb">Desde</span><input type="date" id="d1"></label>
           <label><span class="lb">Hasta</span><input type="date" id="d2"></label>
         </span>
+        <label style="flex:1;min-width:200px"><span class="lb">Buscar</span><input id="vQ" placeholder="Cliente o producto" style="width:100%"></label>
       </div>
       <div class="kps">
         <div class="kp"><span class="mu">Ventas</span><b id="k1">0</b></div>
@@ -280,6 +284,7 @@
 
   let ROL = null, PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [], MOVS = [], GARS = [];
   let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0, difManual = false;
+  let ED = {}, AN = {};
 
   // ----- Sesión y rol -----
   let iniciando = false;
@@ -349,7 +354,7 @@
       if (ROL === "admin") pintarInv();
     }
     if (t === "gar") { pintarDif(); if (ROL === "admin") cargarGarantias(); }
-    if (t === "ven") cargarVentas();
+    if (t === "ven") { ED = {}; AN = {}; cargarVentas(); }
     if (t === "din") cargarDinero();
     if (t === "com") cargarComisiones();
   }
@@ -462,11 +467,12 @@
     $("cobrar").disabled = true; say("msg", "Guardando…", true);
     const { error } = await db.rpc("registrar_venta", {
       p_vendedor: +$("vend").value, p_metodo: $("pago").value,
-      p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked, p_items: items
+      p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked, p_items: items,
+      p_cliente: $("cli").value.trim() || null
     });
     $("cobrar").disabled = false;
     if (error) return say("msg", limpiar(error.message));
-    C = {}; $("dom").checked = false; manual = false;
+    C = {}; $("dom").checked = false; manual = false; $("cli").value = "";
     await cargarCatalogo(); pintarCaja(); pintarSelects();
     if (ROL === "admin") pintarInv();
     say("msg", "Venta registrada por " + f(total) + ".", true);
@@ -549,17 +555,18 @@
     const dif = hayDif ? Math.round(Number($("gDv").value) || 0) : 0;
     if (dif < 0) return say("gM", "La diferencia no puede ser negativa.");
     const cta = $("gDp").value;
+    const cliente = cambio ? ($("gCli").value.trim() || null) : null;
     $("gB").disabled = true;
     const { error } = await db.rpc("registrar_garantia", {
       p_producto: ent.id, p_cantidad: q, p_tipo: cambio ? "cambio" : "danado",
       p_motivo: $("gN").value.trim() || null, p_devuelto: dev ? dev.id : null,
-      p_diferencia: dif, p_cuenta: cta
+      p_diferencia: dif, p_cuenta: cta, p_cliente: cliente
     });
     $("gB").disabled = false;
     if (error) return say("gM", limpiar(error.message));
 
     const pasos = [];
-    if (cambio) pasos.push([`El cliente devolvió ${q} × ${dev.nombre}`, "No vuelve al stock porque está dañado. Ya se había descontado cuando se vendió.", "var(--m)"]);
+    if (cambio) pasos.push([`${cliente ? cliente + " devolvió" : "El cliente devolvió"} ${q} × ${dev.nombre}`, "No vuelve al stock porque está dañado. Ya se había descontado cuando se vendió.", "var(--m)"]);
     pasos.push([`Salió del inventario ${q} × ${ent.nombre}`, `Stock: ${ent.stock} → ${ent.stock - q}`, "var(--t)"]);
     if (ROL === "admin") pasos.push([`Pérdida: ${f(ent.costo * q)}`, "Es el costo del producto que salió.", "var(--r)"]);
     if (dif > 0) pasos.push([`Venta por diferencia: ${f(dif)} en ${cta === "nequi" ? "Nequi" : "efectivo"}`, "Entra al saldo y suma al total vendido.", "var(--g)"]);
@@ -568,13 +575,13 @@
     $("gRes").classList.remove("oculto");
 
     say("gM", "Registrado.", true);
-    $("gN").value = ""; $("gQ").value = 1; difManual = false;
+    $("gN").value = ""; $("gQ").value = 1; $("gCli").value = ""; difManual = false;
     await cargarCatalogo(); pintarCaja(); pintarSelects(); pintarDif();
     if (ROL === "admin") { pintarInv(); cargarGarantias(); }
   };
   async function cargarGarantias() {
     const { data, error } = await db.from("garantias")
-      .select("id, cantidad, tipo, costo_unitario, motivo, creado_en, venta_id, entregado:productos!producto_id(nombre), devuelto:productos!producto_devuelto_id(nombre)")
+      .select("id, cantidad, tipo, costo_unitario, motivo, cliente, creado_en, venta_id, entregado:productos!producto_id(nombre), devuelto:productos!producto_devuelto_id(nombre)")
       .order("creado_en", { ascending: false }).limit(1000);
     if (error) { $("gL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
     GARS = data;
@@ -592,7 +599,7 @@
       const titulo = g.tipo === "cambio" && dev && dev !== ent ? `${g.cantidad} × ${esc(dev)} → ${esc(ent)}` : `${g.cantidad} × ${esc(ent)}`;
       return `<div class="ln"><div>
         <div>${titulo}</div>
-        <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.motivo ? " · " + esc(g.motivo) : ""}${g.venta_id ? " · con diferencia cobrada" : ""}</div></div>
+        <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.cliente ? " · " + esc(g.cliente) : ""}${g.motivo ? " · " + esc(g.motivo) : ""}${g.venta_id ? " · con diferencia cobrada" : ""}</div></div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
         <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${L[g.tipo]}</span>
         <span style="font-size:12px;color:${g.tipo === "reposicion" ? "var(--g)" : "var(--r)"}">${g.tipo === "reposicion" ? "+" : "−"}${f(g.cantidad * g.costo_unitario)}</span>
@@ -613,10 +620,10 @@
     }
     return [a && a.toISOString(), b && b.toISOString()];
   }
-  async function cargarVentas() {
+  async function cargarVentas(mantener) {
     const [a, b] = rango();
     const filtro = q => { if (a) q = q.gte("creado_en", a); if (b) q = q.lte("creado_en", b); return q; };
-    $("vL").innerHTML = '<p class="mu">Cargando…</p>';
+    if (!mantener) $("vL").innerHTML = '<p class="mu">Cargando…</p>';
     const [g, ga] = await Promise.all([
       filtro(db.from("movimientos_dinero").select("monto").eq("tipo", "gasto")),
       filtro(db.from("garantias").select("tipo, cantidad, costo_unitario"))
@@ -626,37 +633,104 @@
     let todas = [], desde = 0;
     while (true) {
       const { data, error } = await filtro(db.from("ventas")
-        .select("id, creado_en, metodo_pago, domicilio, domi_tienda, total, costo_total, comision_total, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
+        .select("id, creado_en, metodo_pago, domicilio, domi_tienda, total, costo_total, comision_total, cliente, vendedor_id, pago_comision_id, anulada, anulada_en, motivo_anulacion, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
         .order("creado_en", { ascending: false }).range(desde, desde + 999));
       if (error) { $("vL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
       todas = todas.concat(data);
       if (data.length < 1000) break;
       desde += 1000;
     }
-    VENTAS = todas; lim = 20; pintarVentas();
+    VENTAS = todas;
+    if (!mantener) lim = 20;
+    pintarVentas();
+  }
+  function filaVenta(s) {
+    const items = s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ");
+    const meta = `${fd(s.creado_en)}${s.cliente ? " · <b>" + esc(s.cliente) + "</b>" : ""} · ${esc(s.vendedores?.nombre || "Cambio por garantía")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}`;
+    let extra = "";
+    if (s.anulada) {
+      extra = `<div style="font-size:12px;color:var(--r);margin-top:3px"><span class="pill">Anulada</span> ${s.anulada_en ? fd(s.anulada_en) : ""}${s.motivo_anulacion ? " · " + esc(s.motivo_anulacion) : ""}</div>`;
+    } else if (ED[s.id]) {
+      extra = `<div class="dif" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        ${s.vendedor_id ? `<label><span class="lb">Vendedor</span><select data-f="v">${VENDS.map(v => `<option value="${v.id}"${v.id === s.vendedor_id ? " selected" : ""}>${esc(v.nombre)}</option>`).join("")}</select></label>` : ""}
+        <label><span class="lb">Pago</span><select data-f="p"><option${s.metodo_pago === "Efectivo" ? " selected" : ""}>Efectivo</option><option${s.metodo_pago === "Nequi" ? " selected" : ""}>Nequi</option></select></label>
+        <label style="flex:1;min-width:140px"><span class="lb">Cliente</span><input data-f="c" value="${esc(s.cliente || "")}" style="width:100%"></label>
+        <button class="pri" data-guardar="${s.id}" style="width:auto;height:38px;padding:0 14px">Guardar</button>
+        <button data-cerrar="1" style="height:38px">Cancelar</button></div>`;
+    } else if (AN[s.id]) {
+      extra = `<div class="dif" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <label style="flex:1;min-width:180px"><span class="lb">Motivo de la anulación</span><input data-f="m" placeholder="Se marcó mal el producto" style="width:100%"></label>
+        <button class="pri rojo" data-anular="${s.id}" style="width:auto;height:38px;padding:0 14px">Anular venta</button>
+        <button data-cerrar="1" style="height:38px">Cancelar</button>
+        <p class="mu" style="width:100%;margin:0;font-size:12px">Los productos vuelven al inventario y la plata sale del saldo. ${s.pago_comision_id ? "La comisión de esta venta ya se pagó y no se modifica." : "La comisión de esta venta deja de contar."}</p></div>`;
+    }
+    const botones = (!s.anulada && !ED[s.id] && !AN[s.id])
+      ? `<div style="display:flex;gap:6px;margin-top:6px"><button class="x" data-editar="${s.id}">Corregir</button>${s.vendedor_id ? `<button class="x" data-anul="${s.id}" style="color:var(--r)">Anular</button>` : ""}</div>`
+      : "";
+    return `<div class="ln" data-venta="${s.id}" style="align-items:flex-start;${s.anulada ? "opacity:.6" : ""}"><div style="flex:1;min-width:0">
+      <div style="${s.anulada ? "text-decoration:line-through" : ""}">${items}</div>
+      <div class="mu" style="font-size:12px">${meta}</div>${extra}${botones}</div>
+      <strong style="white-space:nowrap;${s.anulada ? "text-decoration:line-through" : ""}">${f(s.total)}</strong></div>`;
   }
   function pintarVentas() {
-    const H = VENTAS, V = sum(H, "total"), K = sum(H, "costo_total"), CO = sum(H, "comision_total"), D = sum(H, "domi_tienda");
-    const G = V - K - CO - D - GASTOS - PERDIDAS;
-    $("k1").textContent = H.length; $("k2").textContent = f(V); $("k3").textContent = f(G);
-    $("bd").innerHTML = `<h3>De dónde sale la ganancia</h3>
-      <div class="br"><span>Total vendido</span><span>${f(V)}</span></div>
-      <div class="br mu"><span>− Costo de la mercancía</span><span>${f(K)}</span></div>
-      <div class="br mu"><span>− Comisiones</span><span>${f(CO)}</span></div>
-      <div class="br mu"><span>− Domis pagados por la tienda</span><span>${f(D)}</span></div>
-      <div class="br mu"><span>− Gastos del negocio</span><span>${f(GASTOS)}</span></div>
-      <div class="br mu"><span>− Pérdidas por garantías</span><span>${f(PERDIDAS)}</span></div>
-      <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px;color:var(--g)"><span>Ganancia real</span><span>${f(G)}</span></div>`;
-    $("vL").innerHTML = `<h3>Historial de ventas <span class="mu" style="font-weight:400">(${H.length})</span></h3>` +
-      (H.length ? H.slice(0, lim).map(s => `<div class="ln" style="align-items:flex-start"><div>
-        <div>${s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ")}</div>
-        <div class="mu" style="font-size:12px">${fd(s.creado_en)} · ${esc(s.vendedores?.nombre || "Cambio por garantía")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}</div>
-        </div><strong style="white-space:nowrap">${f(s.total)}</strong></div>`).join("") : '<p class="mu">No hay ventas en este periodo.</p>');
+    const busca = norm($("vQ").value.trim());
+    const H = busca
+      ? VENTAS.filter(s => norm((s.cliente || "") + " " + s.venta_items.map(i => i.nombre).join(" ")).includes(busca))
+      : VENTAS;
+    const A = H.filter(s => !s.anulada);
+    const V = sum(A, "total"), K = sum(A, "costo_total"), CO = sum(A, "comision_total"), D = sum(A, "domi_tienda");
+    $("k1").textContent = A.length; $("k2").textContent = f(V);
+    if (busca) {
+      $("k3").textContent = f(V - K - CO - D);
+      $("bd").innerHTML = `<h3>Resultados para "${esc($("vQ").value.trim())}"</h3>
+        <p class="mu" style="margin:0;font-size:13px">${A.length} ventas por ${f(V)}. La ganancia de arriba es solo de estas ventas (vendido menos costo, comisiones y domis); no incluye gastos del negocio ni garantías.</p>`;
+    } else {
+      const G = V - K - CO - D - GASTOS - PERDIDAS;
+      $("k3").textContent = f(G);
+      $("bd").innerHTML = `<h3>De dónde sale la ganancia</h3>
+        <div class="br"><span>Total vendido</span><span>${f(V)}</span></div>
+        <div class="br mu"><span>− Costo de la mercancía</span><span>${f(K)}</span></div>
+        <div class="br mu"><span>− Comisiones</span><span>${f(CO)}</span></div>
+        <div class="br mu"><span>− Domis pagados por la tienda</span><span>${f(D)}</span></div>
+        <div class="br mu"><span>− Gastos del negocio</span><span>${f(GASTOS)}</span></div>
+        <div class="br mu"><span>− Pérdidas por garantías</span><span>${f(PERDIDAS)}</span></div>
+        <div class="br" style="font-weight:700;border-top:1px solid var(--b);margin-top:4px;padding-top:8px;color:var(--g)"><span>Ganancia real</span><span>${f(G)}</span></div>`;
+    }
+    const nAnul = H.length - A.length;
+    $("vL").innerHTML = `<h3>Historial de ventas <span class="mu" style="font-weight:400">(${A.length}${nAnul ? " · " + nAnul + " anuladas" : ""})</span></h3>` +
+      (H.length ? H.slice(0, lim).map(filaVenta).join("") : '<p class="mu">No hay ventas que coincidan.</p>');
     $("mas").classList.toggle("oculto", H.length <= lim);
   }
+  $("vL").onclick = async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const fila = b.closest("[data-venta]");
+    if (b.dataset.editar) { ED = { [b.dataset.editar]: true }; AN = {}; pintarVentas(); }
+    else if (b.dataset.anul) { AN = { [b.dataset.anul]: true }; ED = {}; pintarVentas(); }
+    else if (b.dataset.cerrar) { ED = {}; AN = {}; pintarVentas(); }
+    else if (b.dataset.guardar) {
+      const id = +b.dataset.guardar, v = fila.querySelector('[data-f="v"]');
+      b.disabled = true;
+      const { error } = await db.rpc("corregir_venta", {
+        p_venta: id, p_vendedor: v ? +v.value : null,
+        p_metodo: fila.querySelector('[data-f="p"]').value,
+        p_cliente: fila.querySelector('[data-f="c"]').value.trim() || null
+      });
+      if (error) { b.disabled = false; return alert(limpiar(error.message)); }
+      ED = {}; await cargarVentas(true);
+    }
+    else if (b.dataset.anular) {
+      const id = +b.dataset.anular, m = fila.querySelector('[data-f="m"]').value.trim();
+      if (!m) return alert("Escribe el motivo de la anulación.");
+      b.disabled = true;
+      const { error } = await db.rpc("anular_venta", { p_venta: id, p_motivo: m });
+      if (error) { b.disabled = false; return alert(limpiar(error.message)); }
+      AN = {}; await cargarVentas(true);
+    }
+  };
   $("per").onchange = () => { $("rg").classList.toggle("oculto", $("per").value !== "r"); cargarVentas(); };
-  $("d1").onchange = cargarVentas;
-  $("d2").onchange = cargarVentas;
+  $("d1").onchange = () => cargarVentas();
+  $("d2").onchange = () => cargarVentas();
+  $("vQ").oninput = () => { lim = 20; pintarVentas(); };
   $("mas").onclick = () => { lim += 20; pintarVentas(); };
 
   // ----- Dinero (dueños) -----
@@ -718,7 +792,8 @@
   // ----- Comisiones (dueños) -----
   async function cargarComisiones() {
     const [p, h] = await Promise.all([
-      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)").is("pago_comision_id", null).not("vendedor_id", "is", null),
+      db.from("ventas").select("vendedor_id, comision_total, venta_items(cantidad)")
+        .is("pago_comision_id", null).eq("anulada", false).not("vendedor_id", "is", null),
       db.from("pagos_comision").select("id, monto, num_ventas, cuenta, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
     ]);
     if (p.error || h.error) { $("cL").innerHTML = `<p style="color:var(--r)">${esc(limpiar((p.error || h.error).message))}</p>`; return; }
