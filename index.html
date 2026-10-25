@@ -366,21 +366,25 @@
 
   // ----- Datos -----
   const rank = c => { const i = ORDEN.indexOf(c); return i < 0 ? 99 : i; };
-  async function cargarCatalogo() {
-    const q = [
-      db.from("productos").select("*").eq("activo", true),
-      db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
-    ];
-    if (ROL === "admin") q.push(db.from("costos").select("producto_id, costo"));
-    const r = await Promise.all(q);
-    const err = r.find(x => x.error);
-    if (err) { alert("Error cargando productos: " + limpiar(err.error.message)); return; }
-    const costos = {};
-    if (r[2]) r[2].data.forEach(c => costos[c.producto_id] = Number(c.costo));
-    PRODS = r[0].data.map(p => ({ ...p, costo: costos[p.id] || 0 }))
-      .sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
-    COMBOS = r[1].data;
-  }
+ async function cargarCatalogo() {
+  const adm = ROL === "admin";
+  const q = [
+    adm ? db.from("productos").select("*").eq("activo", true)
+        : db.from("productos_caja").select("*"),
+    db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
+  ];
+  if (adm) q.push(db.from("costos").select("producto_id, costo"));
+  const r = await Promise.all(q);
+  const err = r.find(x => x.error);
+  if (err) { alert("Error cargando productos: " + limpiar(err.error.message)); return; }
+  const costos = {};
+  if (r[2]) r[2].data.forEach(c => costos[c.producto_id] = Number(c.costo));
+  PRODS = r[0].data.map(p => {
+    if (!adm) p.stock = p.nivel === "agotado" ? 0 : p.nivel === "pocos" ? p.stock_minimo : 9999;
+    return { ...p, costo: costos[p.id] || 0 };
+  }).sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
+  COMBOS = r[1].data;
+}
   async function cargarVendedores() {
     const { data, error } = await db.from("vendedores").select("*").eq("activo", true).order("nombre");
     if (error) { alert(limpiar(error.message)); return; }
@@ -413,12 +417,16 @@
   const alcanza = () => Object.entries(need()).every(([id, q]) => (prod(+id)?.stock || 0) >= q);
   const subtotal = () => Object.keys(C).reduce((a, k) => a + info(k).p * C[k], 0);
 
-  function tarjeta(k, n, sub, precio, stock, min) {
-    return `<button class="pc" data-k="${k}" ${stock <= 0 ? 'style="opacity:.5"' : ""}>
-      <b>${esc(n)}</b><small>${esc(sub)}</small>
-      <div class="fila"><strong>${f(precio)}</strong>
-      <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${stock <= 0 ? "Agotado" : stock + " und"}</span></div></button>`;
-  }
+function tarjeta(k, n, sub, precio, stock, min) {
+  const adm = ROL === "admin";
+  const txt = stock <= 0 ? "Agotado"
+    : adm ? stock + " und"
+    : stock <= min ? "Quedan pocos" : "";
+  return `<button class="pc" data-k="${k}" ${stock <= 0 ? 'style="opacity:.5"' : ""}>
+    <b>${esc(n)}</b><small>${esc(sub)}</small>
+    <div class="fila"><strong>${f(precio)}</strong>
+    <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${txt}</span></div></button>`;
+}
   function pintarCaja() {
     Object.keys(C).forEach(k => { const [t, id] = k.split("-"); if (!(t === "p" ? prod(+id) : combo(+id))) delete C[k]; });
     const cs = ["Todos", ...new Set(PRODS.map(p => p.categoria)), ...(COMBOS.length ? [PROMO] : [])];
