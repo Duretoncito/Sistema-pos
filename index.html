@@ -370,7 +370,7 @@
   const adm = ROL === "admin";
   const q = [
     adm ? db.from("productos").select("*").eq("activo", true)
-        : db.from("productos_caja").select("*"),
+    : db.rpc("productos_caja"),
     db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
   ];
   if (adm) q.push(db.from("costos").select("producto_id, costo"));
