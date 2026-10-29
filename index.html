@@ -62,6 +62,8 @@
   .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
   .x { padding: 3px 10px; color: #7c6f64; font-size: 12px; }
   .dif { background: #faf3e6; border: 1px solid #efe3cc; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+  .mxbar { height: 8px; border-radius: 999px; background: #da0081; overflow: hidden; margin-top: 10px; }
+  .mxbar span { display: block; height: 100%; width: 0; background: var(--g); transition: width .2s; }
   .oculto { display: none !important; }
   .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
   .login input { width: 100%; margin-bottom: 10px; }
@@ -112,7 +114,14 @@
         <div id="cart"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 8px">
           <label><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
-          <label><span class="lb">Pago</span><select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option></select></label>
+          <label><span class="lb">Pago</span><select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option><option>Mixto</option></select></label>
+        </div>
+        <div id="mix" class="dif oculto" style="margin:0 0 12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label><span class="lb">💵 Efectivo</span><input id="mxE" type="number" min="0" step="500" inputmode="numeric" placeholder="0" style="width:100%"></label>
+            <label><span class="lb">📱 Nequi</span><input id="mxN" type="number" min="0" step="500" inputmode="numeric" placeholder="0" style="width:100%"></label>
+          </div>
+          <div class="mxbar"><span id="mxB"></span></div>
         </div>
         <label style="display:block;margin-bottom:12px"><span class="lb">Cliente (opcional)</span><input id="cli" placeholder="Nombre del cliente" style="width:100%"></label>
         <label class="ck"><input type="checkbox" id="dom"> Domicilio</label>
@@ -289,7 +298,7 @@
 
   let ROL = null, PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [], MOVS = [], GARS = [];
   let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0, difManual = false;
-  let ED = {}, AN = {}, DEUDAS = {};
+  let ED = {}, AN = {}, DEUDAS = {}, mixUlt = "e";
 
   // ----- Sesión y rol -----
   let iniciando = false;
@@ -366,25 +375,24 @@
 
   // ----- Datos -----
   const rank = c => { const i = ORDEN.indexOf(c); return i < 0 ? 99 : i; };
- async function cargarCatalogo() {
-  const adm = ROL === "admin";
-  const q = [
-    adm ? db.from("productos").select("*").eq("activo", true)
-    : db.rpc("productos_caja"),
-    db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
-  ];
-  if (adm) q.push(db.from("costos").select("producto_id, costo"));
-  const r = await Promise.all(q);
-  const err = r.find(x => x.error);
-  if (err) { alert("Error cargando productos: " + limpiar(err.error.message)); return; }
-  const costos = {};
-  if (r[2]) r[2].data.forEach(c => costos[c.producto_id] = Number(c.costo));
-  PRODS = r[0].data.map(p => {
-    if (!adm) p.stock = p.nivel === "agotado" ? 0 : p.nivel === "pocos" ? p.stock_minimo : 9999;
-    return { ...p, costo: costos[p.id] || 0 };
-  }).sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
-  COMBOS = r[1].data;
-}
+  async function cargarCatalogo() {
+    const adm = ROL === "admin";
+    const q = [
+      adm ? db.from("productos").select("*").eq("activo", true) : db.rpc("productos_caja"),
+      db.from("combos").select("*, combo_items(producto_id, cantidad)").eq("activo", true).order("nombre")
+    ];
+    if (adm) q.push(db.from("costos").select("producto_id, costo"));
+    const r = await Promise.all(q);
+    const err = r.find(x => x.error);
+    if (err) { alert("Error cargando productos: " + limpiar(err.error.message)); return; }
+    const costos = {};
+    if (r[2]) r[2].data.forEach(c => costos[c.producto_id] = Number(c.costo));
+    PRODS = r[0].data.map(p => {
+      if (!adm) p.stock = p.nivel === "agotado" ? 0 : p.nivel === "pocos" ? p.stock_minimo : 9999;
+      return { ...p, costo: costos[p.id] || 0 };
+    }).sort((a, b) => rank(a.categoria) - rank(b.categoria) || a.nombre.localeCompare(b.nombre, "es"));
+    COMBOS = r[1].data;
+  }
   async function cargarVendedores() {
     const { data, error } = await db.from("vendedores").select("*").eq("activo", true).order("nombre");
     if (error) { alert(limpiar(error.message)); return; }
@@ -417,16 +425,14 @@
   const alcanza = () => Object.entries(need()).every(([id, q]) => (prod(+id)?.stock || 0) >= q);
   const subtotal = () => Object.keys(C).reduce((a, k) => a + info(k).p * C[k], 0);
 
-function tarjeta(k, n, sub, precio, stock, min) {
-  const adm = ROL === "admin";
-  const txt = stock <= 0 ? "Agotado"
-    : adm ? stock + " und"
-    : stock <= min ? "Quedan pocos" : "";
-  return `<button class="pc" data-k="${k}" ${stock <= 0 ? 'style="opacity:.5"' : ""}>
-    <b>${esc(n)}</b><small>${esc(sub)}</small>
-    <div class="fila"><strong>${f(precio)}</strong>
-    <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${txt}</span></div></button>`;
-}
+  function tarjeta(k, n, sub, precio, stock, min) {
+    const adm = ROL === "admin";
+    const txt = stock <= 0 ? "Agotado" : adm ? stock + " und" : stock <= min ? "Quedan pocos" : "";
+    return `<button class="pc" data-k="${k}" ${stock <= 0 ? 'style="opacity:.5"' : ""}>
+      <b>${esc(n)}</b><small>${esc(sub)}</small>
+      <div class="fila"><strong>${f(precio)}</strong>
+      <span style="color:${stock <= min ? "var(--r)" : "var(--m)"}">${txt}</span></div></button>`;
+  }
   function pintarCaja() {
     Object.keys(C).forEach(k => { const [t, id] = k.split("-"); if (!(t === "p" ? prod(+id) : combo(+id))) delete C[k]; });
     const cs = ["Todos", ...new Set(PRODS.map(p => p.categoria)), ...(COMBOS.length ? [PROMO] : [])];
@@ -456,7 +462,26 @@ function tarjeta(k, n, sub, precio, stock, min) {
     $("tot").textContent = f(s);
     $("vc").textContent = f(ks.reduce((a, k) => a + info(k).c * C[k], 0));
     $("gd").innerHTML = d && $("pd").checked ? `<span>Gasto de la tienda (domi)</span><span>${f(DOMI)}</span>` : "";
+    pintarMixto();
   }
+
+  // ----- Pago mixto: lo que escribes en una casilla, la otra se completa hasta el total -----
+  function pintarMixto() {
+    const on = $("pago").value === "Mixto";
+    $("mix").classList.toggle("oculto", !on);
+    if (!on) return;
+    const t = subtotal(), [a, b] = mixUlt === "e" ? ["mxE", "mxN"] : ["mxN", "mxE"];
+    if ($(a).value !== "") {
+      let v = Math.max(0, Math.round(Number($(a).value) || 0));
+      if (v > t) { v = t; $(a).value = t; }
+      $(b).value = t - v;
+    }
+    $("mxB").style.width = (t ? Math.min(100, (Number($("mxE").value) || 0) / t * 100) : 0) + "%";
+  }
+  $("pago").onchange = () => { $("msg").textContent = ""; pintarMixto(); };
+  $("mxE").oninput = () => { mixUlt = "e"; $("msg").textContent = ""; pintarMixto(); };
+  $("mxN").oninput = () => { mixUlt = "n"; $("msg").textContent = ""; pintarMixto(); };
+
   $("grid").onclick = e => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     const k = b.dataset.k;
@@ -475,20 +500,27 @@ function tarjeta(k, n, sub, precio, stock, min) {
     const ks = Object.keys(C);
     if (!ks.length) return say("msg", "Agrega al menos un producto.");
     if (!$("vend").value) return say("msg", "Elige el vendedor.");
+    const total = subtotal(), mixto = $("pago").value === "Mixto";
+    const ef = Math.round(Number($("mxE").value) || 0), nq = Math.round(Number($("mxN").value) || 0);
+    if (mixto && (!ef || !nq)) return say("msg", "Escribe cuánto paga en efectivo o en Nequi.");
+    if (mixto && ef + nq !== total) return say("msg", `Efectivo + Nequi tiene que dar ${f(total)}.`);
     const items = ks.map(k => { const [t, id] = k.split("-"); return { tipo: t === "c" ? "combo" : "producto", id: +id, cantidad: C[k] }; });
-    const total = subtotal();
+    const base = {
+      p_vendedor: +$("vend").value, p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked,
+      p_items: items, p_cliente: $("cli").value.trim() || null
+    };
     $("cobrar").disabled = true; say("msg", "Guardando…", true);
-    const { error } = await db.rpc("registrar_venta", {
-      p_vendedor: +$("vend").value, p_metodo: $("pago").value,
-      p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked, p_items: items,
-      p_cliente: $("cli").value.trim() || null
-    });
+    const { error } = mixto
+      ? await db.rpc("registrar_venta_mixta", { ...base, p_efectivo: ef })
+      : await db.rpc("registrar_venta", { ...base, p_metodo: $("pago").value });
     $("cobrar").disabled = false;
     if (error) return say("msg", limpiar(error.message));
     C = {}; $("dom").checked = false; manual = false; $("cli").value = "";
+    $("mxE").value = ""; $("mxN").value = ""; mixUlt = "e";
+    if (mixto) $("pago").value = "Efectivo";
     await cargarCatalogo(); pintarCaja(); pintarSelects();
     if (ROL === "admin") pintarInv();
-    say("msg", "Venta registrada por " + f(total) + ".", true);
+    say("msg", "Venta registrada por " + f(total) + (mixto ? ` (${f(ef)} efectivo + ${f(nq)} Nequi)` : "") + ".", true);
   };
 
   // ----- Inventario (dueños) -----
@@ -646,7 +678,7 @@ function tarjeta(k, n, sub, precio, stock, min) {
     let todas = [], desde = 0;
     while (true) {
       const { data, error } = await filtro(db.from("ventas")
-        .select("id, creado_en, metodo_pago, domicilio, domi_tienda, total, costo_total, comision_total, cliente, vendedor_id, pago_comision_id, anulada, anulada_en, motivo_anulacion, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
+        .select("id, creado_en, metodo_pago, monto_efectivo, monto_nequi, domicilio, domi_tienda, total, costo_total, comision_total, cliente, vendedor_id, pago_comision_id, anulada, anulada_en, motivo_anulacion, vendedores!vendedor_id(nombre), venta_items(nombre, cantidad)")
         .order("creado_en", { ascending: false }).range(desde, desde + 999));
       if (error) { $("vL").innerHTML = `<p style="color:var(--r)">${esc(limpiar(error.message))}</p>`; return; }
       todas = todas.concat(data);
@@ -659,14 +691,16 @@ function tarjeta(k, n, sub, precio, stock, min) {
   }
   function filaVenta(s) {
     const items = s.venta_items.map(i => i.cantidad + " × " + esc(i.nombre)).join(", ");
-    const meta = `${fd(s.creado_en)}${s.cliente ? " · <b>" + esc(s.cliente) + "</b>" : ""} · ${esc(s.vendedores?.nombre || "Cambio por garantía")} · ${esc(s.metodo_pago)}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}`;
+    const pagoTxt = s.metodo_pago === "Mixto" ? `Mixto (${f(s.monto_efectivo)} efectivo + ${f(s.monto_nequi)} Nequi)` : esc(s.metodo_pago);
+    const meta = `${fd(s.creado_en)}${s.cliente ? " · <b>" + esc(s.cliente) + "</b>" : ""} · ${esc(s.vendedores?.nombre || "Cambio por garantía")} · ${pagoTxt}${s.domicilio ? (Number(s.domi_tienda) ? " · domi pagado por la tienda" : " · domicilio") : ""}`;
+    const metodos = ["Efectivo", "Nequi", ...(s.metodo_pago === "Mixto" ? ["Mixto"] : [])];
     let extra = "";
     if (s.anulada) {
       extra = `<div style="font-size:12px;color:var(--r);margin-top:3px"><span class="pill">Anulada</span> ${s.anulada_en ? fd(s.anulada_en) : ""}${s.motivo_anulacion ? " · " + esc(s.motivo_anulacion) : ""}</div>`;
     } else if (ED[s.id]) {
       extra = `<div class="dif" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
         ${s.vendedor_id ? `<label><span class="lb">Vendedor</span><select data-f="v">${VENDS.map(v => `<option value="${v.id}"${v.id === s.vendedor_id ? " selected" : ""}>${esc(v.nombre)}</option>`).join("")}</select></label>` : ""}
-        <label><span class="lb">Pago</span><select data-f="p"><option${s.metodo_pago === "Efectivo" ? " selected" : ""}>Efectivo</option><option${s.metodo_pago === "Nequi" ? " selected" : ""}>Nequi</option></select></label>
+        <label><span class="lb">Pago</span><select data-f="p">${metodos.map(m => `<option${s.metodo_pago === m ? " selected" : ""}>${m}</option>`).join("")}</select></label>
         <label style="flex:1;min-width:140px"><span class="lb">Cliente</span><input data-f="c" value="${esc(s.cliente || "")}" style="width:100%"></label>
         <button class="pri" data-guardar="${s.id}" style="width:auto;height:38px;padding:0 14px">Guardar</button>
         <button data-cerrar="1" style="height:38px">Cancelar</button></div>`;
@@ -831,7 +865,7 @@ function tarjeta(k, n, sub, precio, stock, min) {
   // ----- Comisiones (dueños) -----
   async function cargarComisiones() {
     const [p, h] = await Promise.all([
-      db.from("ventas").select("vendedor_id, comision_total, total, metodo_pago, domi_tienda, venta_items(cantidad)")
+      db.from("ventas").select("vendedor_id, comision_total, total, metodo_pago, monto_efectivo, domi_tienda, venta_items(cantidad)")
         .is("pago_comision_id", null).eq("anulada", false).not("vendedor_id", "is", null),
       db.from("pagos_comision").select("id, monto, num_ventas, cuenta, creado_en, vendedor_id, vendedores!vendedor_id(nombre)").order("creado_en", { ascending: false }).limit(100)
     ]);
@@ -843,8 +877,8 @@ function tarjeta(k, n, sub, precio, stock, min) {
       const ps = PEND.filter(s => s.vendedor_id === v.id), m = sum(ps, "comision_total");
       const u = ps.reduce((a, s) => a + s.venta_items.reduce((b, i) => b + i.cantidad, 0), 0);
       const ult = PAGOS.find(x => x.vendedor_id === v.id);
-      const ef = ps.filter(s => s.metodo_pago === "Efectivo");
-      const efTotal = sum(ef, "total"), domis = sum(ps, "domi_tienda"), debe = efTotal - domis;
+      const ef = ps.filter(s => Number(s.monto_efectivo) > 0);
+      const efTotal = sum(ps, "monto_efectivo"), domis = sum(ps, "domi_tienda"), debe = efTotal - domis;
       return `<div class="box">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><div class="av">${esc((v.nombre[0] || "?").toUpperCase())}</div>
         <div><b>${esc(v.nombre)}</b><div class="mu" style="font-size:12px">Último pago: ${ult ? fd(ult.creado_en) : "ninguno"}</div></div></div>
@@ -852,7 +886,7 @@ function tarjeta(k, n, sub, precio, stock, min) {
         <div class="ln"><span class="mu">Unidades</span><span>${u}</span></div>
         <div class="br" style="font-size:18px;font-weight:700;padding:10px 0"><span>Comisión por pagar</span><span>${f(m)}</span></div>
         <div class="dif" style="margin:0 0 10px">
-          <div class="br" style="font-size:13px"><span class="mu">Ventas en efectivo (${ef.length})</span><span>${f(efTotal)}</span></div>
+          <div class="br" style="font-size:13px"><span class="mu">Ventas con efectivo (${ef.length})</span><span>${f(efTotal)}</span></div>
           ${domis ? `<div class="br" style="font-size:13px"><span class="mu">− Domis que pagó</span><span>${f(domis)}</span></div>` : ""}
           <div class="br" style="font-weight:700"><span>Efectivo que debería tener</span><span>${f(debe)}</span></div>
           ${m > 0 && debe > 0 ? `<div class="br mu" style="font-size:12px"><span>Si le descuentas su comisión</span><span>${f(debe - m)}</span></div>` : ""}
