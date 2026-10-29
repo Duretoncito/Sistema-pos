@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root { --o:#14110f; --bo:#3b3129; --d:#c9973f; --f:#f7f4ef; --t:#1c1714; --m:#7c6f64; --b:#ebe5dc; --r:#dc2626; --g:#15803d; }
+  :root { --o:#14110f; --bo:#3b3129; --d:#c9973f; --f:#f7f4ef; --t:#1c1714; --m:#7c6f64; --b:#ebe5dc; --r:#dc2626; --g:#15803d; --nq:#2563eb; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Inter, sans-serif; background: var(--f); color: var(--t); font-size: 14px; }
   button, input, select { font: inherit; color: var(--t); }
@@ -62,8 +62,14 @@
   .av { width: 36px; height: 36px; border-radius: 50%; background: #f6ecd9; color: #7a5418; display: grid; place-items: center; font-weight: 600; }
   .x { padding: 3px 10px; color: #7c6f64; font-size: 12px; }
   .dif { background: #faf3e6; border: 1px solid #efe3cc; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
-  .mxbar { height: 8px; border-radius: 999px; background: #da0081; overflow: hidden; margin-top: 10px; }
+  .pagos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pb { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; border-radius: 12px; font-weight: 600; background: #fff; border: 1.5px solid var(--c); color: var(--c); transition: background .15s, color .15s; }
+  .pb span { font-size: 20px; line-height: 1.2; }
+  .pb.on { background: var(--c); color: #fff; }
+  .mxbar { height: 8px; border-radius: 999px; background: var(--nq); overflow: hidden; margin-top: 10px; }
   .mxbar span { display: block; height: 100%; width: 0; background: var(--g); transition: width .2s; }
+  .confv { margin-top: 10px; border-radius: 12px; padding: 14px; border: 2px solid var(--b); background: #fff; }
+  .confv .big { font-size: 22px; font-weight: 700; margin: 2px 0 6px; }
   .oculto { display: none !important; }
   .login { max-width: 360px; margin: 60px auto; padding: 0 16px; text-align: center; }
   .login input { width: 100%; margin-bottom: 10px; }
@@ -109,27 +115,39 @@
         <div class="cats" id="cats"></div>
         <div class="grid" id="grid"></div>
       </div>
-      <div class="box">
+      <div class="box" id="venta">
         <h3>Venta actual</h3>
         <div id="cart"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 8px">
-          <label><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
-          <label><span class="lb">Pago</span><select id="pago" style="width:100%"><option>Efectivo</option><option>Nequi</option><option>Mixto</option></select></label>
+        <label style="display:block;margin:12px 0 10px"><span class="lb">Vendedor</span><select id="vend" style="width:100%"></select></label>
+        <span class="lb">¿Cómo paga el cliente?</span>
+        <div class="pagos" id="pagos">
+          <button class="pb" data-m="Efectivo" style="--c:#15803d"><span>💵</span>Efectivo</button>
+          <button class="pb" data-m="Nequi" style="--c:#2563eb"><span>📱</span>Nequi</button>
+          <button class="pb" data-m="Mixto" style="--c:#b45309"><span>🔀</span>Mixto</button>
         </div>
-        <div id="mix" class="dif oculto" style="margin:0 0 12px">
+        <div id="mix" class="dif oculto">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <label><span class="lb">💵 Efectivo</span><input id="mxE" type="number" min="0" step="500" inputmode="numeric" placeholder="0" style="width:100%"></label>
             <label><span class="lb">📱 Nequi</span><input id="mxN" type="number" min="0" step="500" inputmode="numeric" placeholder="0" style="width:100%"></label>
           </div>
           <div class="mxbar"><span id="mxB"></span></div>
         </div>
-        <label style="display:block;margin-bottom:12px"><span class="lb">Cliente (opcional)</span><input id="cli" placeholder="Nombre del cliente" style="width:100%"></label>
+        <label style="display:block;margin:12px 0"><span class="lb">Cliente (opcional)</span><input id="cli" placeholder="Nombre del cliente" style="width:100%"></label>
         <label class="ck"><input type="checkbox" id="dom"> Domicilio</label>
         <label class="ck" id="pdl" style="margin:8px 0 12px 25px;font-size:13px"><input type="checkbox" id="pd"> Pagamos el domi ($5.000)</label>
         <div class="br" style="font-size:20px;font-weight:700;border-top:1px solid var(--b);padding-top:10px"><span>Total a cobrar</span><span id="tot">$0</span></div>
         <div class="br mu" style="font-size:13px"><span>Comisión vendedor</span><span id="vc">$0</span></div>
         <div class="br mu" style="font-size:13px" id="gd"></div>
-        <button class="pri" id="cobrar" style="margin-top:10px">Cobrar</button>
+        <div id="confV" class="confv oculto">
+          <span class="mu" style="font-size:13px">¿Está todo bien?</span>
+          <p class="big" id="cfT"></p>
+          <p class="mu" id="cfS" style="margin:0 0 12px;font-size:13px"></p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button id="confSi" class="pri" style="padding:12px">Confirmar</button>
+            <button id="confNo" style="padding:12px">Corregir</button>
+          </div>
+        </div>
+        <button class="pri" id="cobrar" style="margin-top:10px">Elige cómo paga</button>
         <p class="msg" id="msg"></p>
       </div>
     </section>
@@ -279,6 +297,7 @@
   const ORDEN = ["Vapers", "Destilados", "Baterías", "Gomitas", "Licores", "Cervezas"];
   const PROMO = "Promociones";
   const DUENOS = ["Sneider", "Gamboa"];   // ✏️ nombres de los dueños para los préstamos
+  const COLOR = { Efectivo: "#15803d", Nequi: "#2563eb", Mixto: "#b45309" };   // ✏️ color de cada forma de pago
 
   // ---------- De aquí para abajo no necesitas tocar nada ----------
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -298,7 +317,7 @@
 
   let ROL = null, PRODS = [], COMBOS = [], VENDS = [], VENTAS = [], PEND = [], PAGOS = [], MOVS = [], GARS = [];
   let C = {}, cat = "Todos", manual = false, lim = 20, conf = {}, cargado = false, GASTOS = 0, PERDIDAS = 0, difManual = false;
-  let ED = {}, AN = {}, DEUDAS = {}, mixUlt = "e";
+  let ED = {}, AN = {}, DEUDAS = {}, PAGO = null, mixUlt = "e";
 
   // ----- Sesión y rol -----
   let iniciando = false;
@@ -310,7 +329,7 @@
   }
   async function pantalla(s) {
     if (!s) {
-      ROL = null; cargado = false; C = {};
+      ROL = null; cargado = false; C = {}; PAGO = null;
       $("vLogin").classList.remove("oculto"); $("vApp").classList.add("oculto");
       return;
     }
@@ -462,25 +481,35 @@
     $("tot").textContent = f(s);
     $("vc").textContent = f(ks.reduce((a, k) => a + info(k).c * C[k], 0));
     $("gd").innerHTML = d && $("pd").checked ? `<span>Gasto de la tienda (domi)</span><span>${f(DOMI)}</span>` : "";
-    pintarMixto();
+    pintarPago();
   }
 
-  // ----- Pago mixto: lo que escribes en una casilla, la otra se completa hasta el total -----
-  function pintarMixto() {
-    const on = $("pago").value === "Mixto";
-    $("mix").classList.toggle("oculto", !on);
-    if (!on) return;
-    const t = subtotal(), [a, b] = mixUlt === "e" ? ["mxE", "mxN"] : ["mxN", "mxE"];
-    if ($(a).value !== "") {
-      let v = Math.max(0, Math.round(Number($(a).value) || 0));
-      if (v > t) { v = t; $(a).value = t; }
-      $(b).value = t - v;
+  // ----- Forma de pago: botones de colores, mixto y confirmación -----
+  const montosMixto = () => [Math.round(Number($("mxE").value) || 0), Math.round(Number($("mxN").value) || 0)];
+  function ocultarConf() { $("confV").classList.add("oculto"); $("cobrar").classList.remove("oculto"); }
+  function pintarPago() {
+    const t = subtotal(), c = COLOR[PAGO];
+    document.querySelectorAll("#pagos .pb").forEach(b => b.classList.toggle("on", b.dataset.m === PAGO));
+    $("venta").style.borderColor = c || "";
+    $("venta").style.borderWidth = c ? "2px" : "";
+    $("mix").classList.toggle("oculto", PAGO !== "Mixto");
+    if (PAGO === "Mixto") {
+      const [a, b] = mixUlt === "e" ? ["mxE", "mxN"] : ["mxN", "mxE"];
+      if ($(a).value !== "") {
+        let v = Math.max(0, Math.round(Number($(a).value) || 0));
+        if (v > t) { v = t; $(a).value = t; }
+        $(b).value = t - v;
+      }
+      $("mxB").style.width = (t ? Math.min(100, (Number($("mxE").value) || 0) / t * 100) : 0) + "%";
     }
-    $("mxB").style.width = (t ? Math.min(100, (Number($("mxE").value) || 0) / t * 100) : 0) + "%";
+    $("cobrar").style.background = c || "var(--m)";
+    $("cobrar").style.borderColor = c || "var(--m)";
+    $("cobrar").textContent = PAGO ? "Cobrar" : "Elige cómo paga";
+    ocultarConf();
   }
-  $("pago").onchange = () => { $("msg").textContent = ""; pintarMixto(); };
-  $("mxE").oninput = () => { mixUlt = "e"; $("msg").textContent = ""; pintarMixto(); };
-  $("mxN").oninput = () => { mixUlt = "n"; $("msg").textContent = ""; pintarMixto(); };
+  $("pagos").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; PAGO = b.dataset.m; $("msg").textContent = ""; pintarPago(); };
+  $("mxE").oninput = () => { mixUlt = "e"; $("msg").textContent = ""; pintarPago(); };
+  $("mxN").oninput = () => { mixUlt = "n"; $("msg").textContent = ""; pintarPago(); };
 
   $("grid").onclick = e => {
     const b = e.target.closest("[data-k]"); if (!b) return;
@@ -495,15 +524,30 @@
   $("cart").onclick = e => { const b = e.target.closest("[data-r]"); if (!b) return; const k = b.dataset.r; if (--C[k] <= 0) delete C[k]; pintarCarrito(); };
   $("dom").onchange = pintarCarrito;
   $("pd").onchange = () => { if (!$("dom").checked) { $("pd").checked = false; return; } manual = true; pintarCarrito(); };
-  $("vend").onchange = () => $("msg").textContent = "";
-  $("cobrar").onclick = async () => {
-    const ks = Object.keys(C);
-    if (!ks.length) return say("msg", "Agrega al menos un producto.");
+  $("vend").onchange = () => { $("msg").textContent = ""; ocultarConf(); };
+
+  $("cobrar").onclick = () => {
+    if (!Object.keys(C).length) return say("msg", "Agrega al menos un producto.");
     if (!$("vend").value) return say("msg", "Elige el vendedor.");
-    const total = subtotal(), mixto = $("pago").value === "Mixto";
-    const ef = Math.round(Number($("mxE").value) || 0), nq = Math.round(Number($("mxN").value) || 0);
-    if (mixto && (!ef || !nq)) return say("msg", "Escribe cuánto paga en efectivo o en Nequi.");
-    if (mixto && ef + nq !== total) return say("msg", `Efectivo + Nequi tiene que dar ${f(total)}.`);
+    if (!PAGO) return say("msg", "Toca Efectivo, Nequi o Mixto.");
+    const total = subtotal(), [ef, nq] = montosMixto();
+    if (PAGO === "Mixto" && (!ef || !nq)) return say("msg", "Escribe cuánto paga en efectivo o en Nequi.");
+    if (PAGO === "Mixto" && ef + nq !== total) return say("msg", `Efectivo + Nequi tiene que dar ${f(total)}.`);
+    const c = COLOR[PAGO], und = Object.values(C).reduce((a, q) => a + q, 0);
+    const vend = $("vend").selectedOptions[0]?.textContent || "";
+    $("confV").style.borderColor = c; $("cfT").style.color = c;
+    $("confSi").style.background = c; $("confSi").style.borderColor = c;
+    $("cfT").textContent = `${f(total)} ${PAGO === "Efectivo" ? "en efectivo" : PAGO === "Nequi" ? "por Nequi" : "mixto"}`;
+    $("cfS").textContent = PAGO === "Mixto"
+      ? `${f(ef)} en efectivo + ${f(nq)} por Nequi · Vendedor: ${vend}`
+      : `Vendedor: ${vend} · ${und} ${und === 1 ? "producto" : "productos"}${$("dom").checked ? " · domicilio" : ""}`;
+    $("confV").classList.remove("oculto"); $("cobrar").classList.add("oculto"); $("msg").textContent = "";
+  };
+  $("confNo").onclick = ocultarConf;
+  $("confSi").onclick = () => { ocultarConf(); guardarVenta(); };
+
+  async function guardarVenta() {
+    const ks = Object.keys(C), total = subtotal(), metodo = PAGO, mixto = metodo === "Mixto", [ef, nq] = montosMixto();
     const items = ks.map(k => { const [t, id] = k.split("-"); return { tipo: t === "c" ? "combo" : "producto", id: +id, cantidad: C[k] }; });
     const base = {
       p_vendedor: +$("vend").value, p_domicilio: $("dom").checked, p_domi_tienda: $("pd").checked,
@@ -512,16 +556,16 @@
     $("cobrar").disabled = true; say("msg", "Guardando…", true);
     const { error } = mixto
       ? await db.rpc("registrar_venta_mixta", { ...base, p_efectivo: ef })
-      : await db.rpc("registrar_venta", { ...base, p_metodo: $("pago").value });
+      : await db.rpc("registrar_venta", { ...base, p_metodo: metodo });
     $("cobrar").disabled = false;
     if (error) return say("msg", limpiar(error.message));
     C = {}; $("dom").checked = false; manual = false; $("cli").value = "";
-    $("mxE").value = ""; $("mxN").value = ""; mixUlt = "e";
-    if (mixto) $("pago").value = "Efectivo";
+    $("mxE").value = ""; $("mxN").value = ""; mixUlt = "e"; PAGO = null;
     await cargarCatalogo(); pintarCaja(); pintarSelects();
     if (ROL === "admin") pintarInv();
-    say("msg", "Venta registrada por " + f(total) + (mixto ? ` (${f(ef)} efectivo + ${f(nq)} Nequi)` : "") + ".", true);
-  };
+    say("msg", "Venta registrada por " + f(total) +
+      (mixto ? ` (${f(ef)} efectivo + ${f(nq)} Nequi)` : metodo === "Nequi" ? " por Nequi" : " en efectivo") + ".", true);
+  }
 
   // ----- Inventario (dueños) -----
   function ponerCosto() { const p = prod(+$("eP").value); $("eK").value = p && p.costo > 0 ? Math.round(p.costo) : ""; }
