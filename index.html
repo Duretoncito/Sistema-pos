@@ -188,6 +188,7 @@
             <select id="gT" style="width:100%">
               <option value="cambio">Cambio por garantía (el cliente trae un dañado)</option>
               <option value="danado">Dañado en tienda (nunca se vendió)</option>
+              <option value="promocion">Promoción (producto gratis)</option> <!-- ✏️ CAMBIO 1 -->
             </select>
           </label>
           <label><span class="lb">Cantidad</span><input id="gQ" type="number" min="1" step="1" value="1" style="width:80px"></label>
@@ -648,7 +649,7 @@
     $("gB").disabled = true;
     const { error } = await db.rpc("registrar_garantia", {
       p_producto: ent.id, p_cantidad: q, p_tipo: cambio ? "cambio" : "danado",
-      p_motivo: $("gN").value.trim() || null, p_devuelto: dev ? dev.id : null,
+      p_motivo: $("gT").value === "promocion" ? "Promoción: " + ($("gN").value.trim() || "sin nombre") : ($("gN").value.trim() || null), p_devuelto: dev ? dev.id : null, // ✏️ CAMBIO 2
       p_diferencia: dif, p_cuenta: cta, p_cliente: cliente
     });
     $("gB").disabled = false;
@@ -690,7 +691,7 @@
         <div>${titulo}</div>
         <div class="mu" style="font-size:12px">${fd(g.creado_en)}${g.cliente ? " · " + esc(g.cliente) : ""}${g.motivo ? " · " + esc(g.motivo) : ""}${g.venta_id ? " · con diferencia cobrada" : ""}</div></div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-        <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${L[g.tipo]}</span>
+        <span class="pill${g.tipo === "reposicion" ? " ok" : ""}">${(g.motivo || "").startsWith("Promoción") ? "Promoción" : L[g.tipo]}</span>
         <span style="font-size:12px;color:${g.tipo === "reposicion" ? "var(--g)" : "var(--r)"}">${g.tipo === "reposicion" ? "+" : "−"}${f(g.cantidad * g.costo_unitario)}</span>
         </div></div>`;
     }).join("") : '<p class="mu">Todavía no hay garantías registradas.</p>');
@@ -943,7 +944,7 @@
               <button data-cancel="${v.id}" style="width:100%;margin-top:6px">Cancelar</button>`
           : `<button class="pri" data-ask="${v.id}">Pagar comisión</button>`}
       </div>`;
-    }).join("");
+  }).join("");
     $("hL").innerHTML = "<h3>Historial de pagos</h3>" + (PAGOS.length ? PAGOS.map(x => `<div class="ln"><div>
       <div>${esc(x.vendedores?.nombre || "")}</div>
       <div class="mu" style="font-size:12px">${fd(x.creado_en)} · ${x.num_ventas} ventas · ${x.cuenta === "nequi" ? "Nequi" : "Efectivo"}</div>
