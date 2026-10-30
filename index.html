@@ -374,7 +374,7 @@
 
   // ----- Pestañas según el rol -----
   const TABS = {
-    admin: [["caja", "Caja"], ["inv", "Inventario"], ["gar", "Garantías"], ["ven", "Ventas"], ["din", "Dinero"], ["com", "Comisiones"]],
+    admin: [["caja", "Caja"], ["inv", "Inventario"], ["gar", "Garantías y promociones"], ["ven", "Ventas"], ["din", "Dinero"], ["com", "Comisiones"]],
     caja:  [["caja", "Caja"], ["gar", "Garantías"]]
   };
   function pintarTabs() { $("tabs").innerHTML = TABS[ROL].map(([id, n]) => `<button class="tab" data-t="${id}">${n}</button>`).join(""); }
